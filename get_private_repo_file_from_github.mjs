@@ -1,3 +1,4 @@
+$.verbose = false;
 
 
 const getApiLink = (org, repo, path, branch) => {
@@ -8,7 +9,6 @@ const parseURL = (url) => {
   if (!url) return ''
   // check github.com url
   if (url.includes('github.com')) {
-    console.log('url:', url)
     const p1 = /github.com\/(.*?)\/blob/g.exec(url)
     const p2 = /blob\/(.*)/g.exec(url)
     if (!p1 || !p2) return
@@ -44,11 +44,10 @@ const parseURL = (url) => {
 const { GITHUB_PAT, GITHUB_ORG, GITHUB_REPO, GITHUB_PATH, GITHUB_URL } = process.env
 let url = GITHUB_URL || getApiLink(GITHUB_ORG, GITHUB_REPO, GITHUB_PATH)
 
-// console.log(url)
 url = parseURL(url)
-
 let response = await fetch(url, {
   headers: { 'Authorization': `token ${GITHUB_PAT}` }
 })
 const data = await response.text();
-$`echo ${data}`
+
+process.stdout.write(data)
