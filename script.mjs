@@ -1,3 +1,5 @@
+#!/usr/bin/env zx
+
 const outputDataToPipeline = async (key, val) => {
   // for azure pipeline
   //   await $.quote(`echo "##vso[task.setvariable variable=${key}]${val}`);
