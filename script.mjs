@@ -71,4 +71,4 @@ const res = await Promise.all(
 
 // for build script
 const azurePipelineScript = res.map((key) => `${key}=$(${key})`).join(" ");
-outputDataToPipeline("azurePipelineScript", azurePipelineScript);
+outputDataToPipeline("AZURE_CICD_SCRIPT", azurePipelineScript);
