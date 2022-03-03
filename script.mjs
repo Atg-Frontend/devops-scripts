@@ -3,8 +3,8 @@
 const outputDataToPipeline = async (key, val) => {
   // for azure pipeline
   //   await $.quote(`echo "##vso[task.setvariable variable=${key}]${val}`);
-  // $`echo ##vso[task.setvariable variable=${key}]${val}`;
-  $`echo "##vso[task.setvariable variable=${key}]${val}"`;
+  $`echo ##vso[task.setvariable variable=${key}]${val}`;
+  //   $`echo "##vso[task.setvariable variable=${key}]${val}"`;
   // for github action
   //   $`echo "::set-output name=${key}::${val}"`;
 };
@@ -64,11 +64,11 @@ const res = await Promise.all(
       `--GITHUB_PAT=${GITHUB_PAT}`,
     ]);
     const { download_url } = data;
-    // await outputDataToPipeline(key, download_url);
+    await outputDataToPipeline(key, download_url);
     return key;
   })
 );
 
 // for build script
-const azurePipelineScript = res.map((key) => `${key}=$(${key})`).join(" ");
-outputDataToPipeline("azurePipelineScript", azurePipelineScript);
+// const azurePipelineScript = res.map((key) => `${key}=$(${key})`).join(" ");
+// outputDataToPipeline("azurePipelineScript", azurePipelineScript);
