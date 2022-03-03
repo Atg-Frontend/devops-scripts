@@ -1,3 +1,5 @@
+#!/usr/bin/env zx
+
 const getApiLink = (org, repo, path, branch) => {
   return `https://api.github.com/repos/${org}/${repo}/contents/${path}${
     branch ? `?ref=${branch}` : ""
