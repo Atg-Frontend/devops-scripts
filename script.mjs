@@ -6,7 +6,7 @@ const outputDataToPipeline = async (key, val) => {
   $`echo ##vso[task.setvariable variable=${key}]${val}`;
   //   $`echo "##vso[task.setvariable variable=${key}]${val}"`;
   // for github action
-  //   $`echo "::set-output name=${key}::${val}"`;
+  $`echo ::set-output name=${key}::${val}`;
 };
 
 const getFileContent = async ({ FILE_PATH, FILE_URL }) => {
@@ -70,5 +70,5 @@ const res = await Promise.all(
 );
 
 // for build script
-// const azurePipelineScript = res.map((key) => `${key}=$(${key})`).join(" ");
-// outputDataToPipeline("azurePipelineScript", azurePipelineScript);
+const azurePipelineScript = res.map((key) => `${key}=$(${key})`).join(" ");
+outputDataToPipeline("azurePipelineScript", azurePipelineScript);
