@@ -9,7 +9,7 @@ const getApiLink = (org, repo, path, branch) => {
 const parseURL = (url) => {
   if (!url) return "";
   // check github.com url
-  if (url.includes("github.com")) {
+  if (url.includes("//github.com")) {
     const p1 = /github.com\/(.*?)\/blob/g.exec(url);
     const p2 = /blob\/(.*)/g.exec(url);
     if (!p1 || !p2) return;
@@ -56,4 +56,5 @@ const main = async () => {
   return data;
 };
 
+// console.log(argv);
 process.stdout.write(await main());
