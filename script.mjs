@@ -65,10 +65,15 @@ const res = await Promise.all(
     ]);
     const { download_url } = data;
     await outputDataToPipeline(key, download_url);
-    return key;
+    return {
+      key,
+      val: download_url,
+    };
   })
 );
 
 // for build script
-const azurePipelineScript = res.map((key) => `${key}=$(${key})`).join(" ");
+const azurePipelineScript = res
+  .map(({ key, val }) => `${key}=${val}`)
+  .join(" ");
 outputDataToPipeline("AZURE_CICD_SCRIPT", azurePipelineScript);
