@@ -2,8 +2,9 @@
 
 const outputDataToPipeline = async (key, val) => {
   // for azure pipeline
-  await $.quote(`echo "##vso[task.setvariable variable=${key}]${val}`);
-  //   $`echo ##vso[task.setvariable variable=${key}]${val}`;
+  //   await $.quote(`echo "##vso[task.setvariable variable=${key}]${val}`);
+  // $`echo ##vso[task.setvariable variable=${key}]${val}`;
+  $`echo "##vso[task.setvariable variable=${key}]${val}"`;
   // for github action
   //   $`echo "::set-output name=${key}::${val}"`;
 };
