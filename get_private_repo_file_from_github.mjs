@@ -42,11 +42,12 @@ const parseURL = (url) => {
 };
 
 const main = async () => {
-  const { GITHUB_PAT, GITHUB_ORG, GITHUB_REPO, GITHUB_PATH, GITHUB_URL } =
-    process.env;
+  const GITHUB_PAT = process.env.GITHUB_PAT || argv.GITHUB_PAT;
+  const GITHUB_REPO = process.env.GITHUB_REPO || argv.GITHUB_REPO;
+  const GITHUB_PATH = process.env.GITHUB_PATH || argv.GITHUB_PATH;
+  const GITHUB_URL = process.env.GITHUB_URL || argv.GITHUB_URL;
   let url = GITHUB_URL || getApiLink(GITHUB_ORG, GITHUB_REPO, GITHUB_PATH);
 
-  $.verbose = false;
   url = parseURL(url);
   let response = await fetch(url, {
     headers: { Authorization: `token ${GITHUB_PAT}` },
@@ -55,5 +56,4 @@ const main = async () => {
   return data;
 };
 
-$.verbose = false;
 process.stdout.write(await main());
