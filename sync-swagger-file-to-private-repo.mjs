@@ -15,6 +15,17 @@ const checkArgv = async (argvArr) => {
   await runRemoteScript(fileUrl, [`--checkArgv=${argvArr.join(",")}`, ...envs]);
 };
 
+const getFileContent = async ({ FILE_PATH, FILE_URL }) => {
+  if (FILE_PATH) {
+    return await fs.readFile(FILE_PATH, "utf8");
+  } else if (FILE_URL) {
+    const res = await fetch(FILE_URL);
+    return res.text();
+  } else {
+    throw new Error("FILE_PATH or FILE_URL is not set.");
+  }
+};
+
 // -- base util
 
 const apiCall = async (url, opt) => {
@@ -25,7 +36,42 @@ const apiCall = async (url, opt) => {
 
 // -- github api
 
-const getBranch = async (pat, user, repo, branch = "main") => {
+const createPulls = async (pat, user, repo, { head, base, title }) => {
+  const url = `https://api.github.com/repos/${user}/${repo}/pulls`;
+  const opt = {
+    method: "POST",
+    headers: { Authorization: `token ${pat}` },
+    body: JSON.stringify({
+      head,
+      base,
+      title,
+    }),
+  };
+
+  const data = await apiCall(url, opt);
+  return JSON.parse(data);
+};
+
+const requestReviewer2Pull = async (
+  pat,
+  user,
+  repo,
+  { pull_number, reviewers }
+) => {
+  const url = `https://api.github.com/repos/${user}/${repo}/pulls/${pull_number}/requested_reviewers`;
+  const opt = {
+    method: "POST",
+    headers: { Authorization: `token ${pat}` },
+    body: JSON.stringify({
+      reviewers,
+    }),
+  };
+
+  const data = await apiCall(url, opt);
+  return data;
+};
+
+const getBranch = async (pat, user, repo, branch) => {
   const url = `https://api.github.com/repos/${user}/${repo}/git/refs/heads/${branch}`;
 
   const opt = {
@@ -37,14 +83,26 @@ const getBranch = async (pat, user, repo, branch = "main") => {
   return JSON.parse(data);
 };
 
-const createBranch = async (pat, user, repo) => {
-  // const url = `https://api.github.com/repos/${user}/${repo}/git/refs`
-
+const createBranch = async (pat, user, repo, { branch, baseBranch }) => {
+  // get base branch sha
   const {
     object: { sha: shaMain },
-  } = await getBranch(pat, user, repo, "main");
+  } = await getBranch(pat, user, repo, baseBranch);
 
-  return shaMain;
+  const url = `https://api.github.com/repos/${user}/${repo}/git/refs`;
+  const opt = {
+    method: "POST",
+    headers: { Authorization: `token ${pat}` },
+    body: JSON.stringify({
+      ref: `refs/heads/${branch}`,
+      sha: shaMain,
+    }),
+  };
+
+  // create branch
+  const data = await apiCall(url, opt);
+
+  return data;
 };
 
 const readFile = async (pat, user, repo, { branch = "main", path } = {}) => {
@@ -60,8 +118,9 @@ const readFile = async (pat, user, repo, { branch = "main", path } = {}) => {
 };
 
 const createFile = async (pat, user, repo, { branch, path, content } = {}) => {
+  // read file first to get sha if exist
   const { sha } = await readFile(pat, user, repo, { branch, path });
-  console.log("sha", sha);
+  const message = sha ? "Update swagger.json" : "Create swagger.json";
 
   const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
 
@@ -75,7 +134,7 @@ const createFile = async (pat, user, repo, { branch, path, content } = {}) => {
       branch,
       content: Buffer.from(content).toString("base64"),
       sha,
-      message: "create file from auto script",
+      message,
     }),
   };
 
@@ -84,15 +143,34 @@ const createFile = async (pat, user, repo, { branch, path, content } = {}) => {
   return JSON.parse(JSON.stringify(data));
 };
 
-const getSwaggerFile = async (url) => {
-  const projectName = /atg-(.*?)-dev/g.exec(url)[1];
-  const folderName = /swagger\/(.*?)\/swagger/g.exec(url)[1];
-  const data = await apiCall(url);
-  return {
-    data,
-    project: projectName.toLowerCase(),
-    folder: folderName.toLowerCase(),
-  };
+const getSwagger = async ({ url, file }) => {
+  if (url) {
+    const data = await getFileContent({ FILE_URL: url });
+    const projectName = /atg-(.*?)-dev/g.exec(url)[1];
+    const folderName = /swagger\/(.*?)\/swagger/g.exec(url)[1];
+    return [
+      {
+        project: projectName.toLowerCase(),
+        folder: folderName.toLowerCase(),
+        data,
+      },
+    ];
+  } else if (file) {
+    const res = await getFileContent({ FILE_PATH: file });
+    const { atgList } = JSON.parse(res);
+    const output = await Promise.all(
+      atgList
+        .map((itemUrl) => {
+          return getSwagger({ url: itemUrl });
+        })
+        .flat()
+    );
+
+    return output.flat();
+  }
+  {
+    return [];
+  }
 };
 
 // -- main
@@ -100,26 +178,68 @@ const main = async () => {
   const GITHUB_PAT = process.env.GITHUB_PAT || argv.GITHUB_PAT;
   const GITHUB_USER = process.env.GITHUB_USER || argv.GITHUB_USER;
   const GITHUB_REPO = process.env.GITHUB_REPO || argv.GITHUB_REPO;
-  const GITHUB_BRANCH = process.env.GITHUB_BRANCH || argv.GITHUB_BRANCH;
+  const GITHUB_BRANCH =
+    process.env.GITHUB_BRANCH ||
+    argv.GITHUB_BRANCH ||
+    `swaggerbot/${new Date()
+      .toISOString()
+      .split("-")
+      .join("")
+      .split(":")
+      .join("")}`;
+
+  const GITHUB_BRANCH_BASE =
+    process.env.GITHUB_BRANCH_BASE || argv.GITHUB_BRANCH_BASE || "main";
+  const GITHUB_REVIEWERS =
+    process.env.GITHUB_REVIEWERS || argv.GITHUB_REVIEWERS;
 
   const SWAGGER_URL = process.env.SWAGGER_URL || argv.SWAGGER_URL;
+  const SWAGGER_FILE = process.env.SWAGGER_FILE || argv.SWAGGER_FILE;
 
-  const { data, project, folder } = await getSwaggerFile(SWAGGER_URL);
+  if (!SWAGGER_URL && !SWAGGER_FILE) {
+    throw new Error("SWAGGER_URL or SWAGGER_FILE is required");
+  }
 
-  const res = await createFile(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
-    branch: GITHUB_BRANCH,
-    path: `${project}/${folder}/swagger.json`,
-    content: data,
+  const listRes = await getSwagger({
+    url: SWAGGER_URL,
+    file: SWAGGER_FILE,
   });
 
-  return res;
+  // create branch
+  await createBranch(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
+    branch: GITHUB_BRANCH,
+    baseBranch: GITHUB_BRANCH_BASE,
+  });
+
+  const updateItems = [];
+
+  // create a file for each project
+  await Promise.all(
+    listRes.map((item) => {
+      const { data, project, folder } = item;
+      updateItems.push(`${project}/${folder}`);
+      return createFile(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
+        branch: GITHUB_BRANCH,
+        path: `${project}/${folder}/swagger.json`,
+        content: data,
+      });
+    })
+  );
+
+  // create PR
+  const { number } = await createPulls(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
+    head: GITHUB_BRANCH,
+    base: GITHUB_BRANCH_BASE,
+    title: `feat: ${updateItems.join(", ")}`,
+  });
+  // assign reviewers
+  await requestReviewer2Pull(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
+    reviewers: (GITHUB_REVIEWERS || "").split("|"),
+    pull_number: number,
+  });
+
+  return "ok";
 };
 
-await checkArgv([
-  "GITHUB_PAT",
-  "GITHUB_USER",
-  "GITHUB_REPO",
-  "GITHUB_BRANCH",
-  "SWAGGER_URL",
-]);
+await checkArgv(["GITHUB_PAT", "GITHUB_USER", "GITHUB_REPO"]);
 process.stdout.write(await main());
