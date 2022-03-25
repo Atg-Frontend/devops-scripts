@@ -20,7 +20,7 @@ const getFileContent = async ({ FILE_PATH, FILE_URL }) => {
     return await fs.readFile(FILE_PATH, "utf8");
   } else if (FILE_URL) {
     const res = await fetch(FILE_URL);
-    return res.text();
+    return res.status === 200 ? res.text() : false;
   } else {
     throw new Error("FILE_PATH or FILE_URL is not set.");
   }
@@ -49,7 +49,8 @@ const createPulls = async (pat, user, repo, { head, base, title }) => {
   };
 
   const data = await apiCall(url, opt);
-  return JSON.parse(data);
+  const { number } = JSON.parse(data);
+  return number || false;
 };
 
 const requestReviewer2Pull = async (
@@ -68,6 +69,18 @@ const requestReviewer2Pull = async (
   };
 
   const data = await apiCall(url, opt);
+  return data;
+};
+
+const removeBranch = async (pat, user, repo, { branch }) => {
+  const url = `https://api.github.com/repos/${user}/${repo}/git/refs/heads/${branch}`;
+  const opt = {
+    method: "DELETE",
+    headers: { Authorization: `token ${pat}` },
+  };
+
+  const data = await apiCall(url, opt);
+  console.log(`${branch} branch was removed`);
   return data;
 };
 
@@ -101,8 +114,13 @@ const createBranch = async (pat, user, repo, { branch, baseBranch }) => {
 
   // create branch
   const data = await apiCall(url, opt);
+  const { ref } = JSON.parse(data);
 
-  return data;
+  console.log(
+    ref ? `create branch ${branch} success.` : `${branch} branch already exist`
+  );
+
+  return ref ? true : false;
 };
 
 const readFile = async (pat, user, repo, { branch = "main", path } = {}) => {
@@ -117,10 +135,21 @@ const readFile = async (pat, user, repo, { branch = "main", path } = {}) => {
   return JSON.parse(data);
 };
 
-const createFile = async (pat, user, repo, { branch, path, content } = {}) => {
+const createFile = async (
+  pat,
+  user,
+  repo,
+  { branch, path, content, project, folder } = {}
+) => {
   // read file first to get sha if exist
-  const { sha } = await readFile(pat, user, repo, { branch, path });
-  const message = sha ? "Update swagger.json" : "Create swagger.json";
+  const { sha } = await readFile(pat, user, repo, {
+    branch,
+    path,
+  });
+
+  const message = sha
+    ? `feat: update ${project}/${folder} swagger.json`
+    : `feat: create ${project}/${folder} swagger.json`;
 
   const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
 
@@ -140,12 +169,24 @@ const createFile = async (pat, user, repo, { branch, path, content } = {}) => {
 
   const data = await apiCall(url, opt);
 
-  return JSON.parse(JSON.stringify(data));
+  const {
+    content: { sha: newSha },
+  } = JSON.parse(data);
+
+  // compare sha & new sha
+  if (sha && sha === newSha) {
+    console.log(`${path} is same as old content. skip`);
+    return false;
+  } else {
+    return true;
+  }
 };
 
 const getSwagger = async ({ url, file }) => {
   if (url) {
     const data = await getFileContent({ FILE_URL: url });
+    if (!data) return [{}];
+
     const projectName = /atg-(.*?)-dev/g.exec(url)[1];
     const folderName = /swagger\/(.*?)\/swagger/g.exec(url)[1];
     return [
@@ -157,6 +198,8 @@ const getSwagger = async ({ url, file }) => {
     ];
   } else if (file) {
     const res = await getFileContent({ FILE_PATH: file });
+    if (!res) return [{}];
+
     const { atgList } = JSON.parse(res);
     const output = await Promise.all(
       atgList
@@ -167,8 +210,7 @@ const getSwagger = async ({ url, file }) => {
     );
 
     return output.flat();
-  }
-  {
+  } else {
     return [];
   }
 };
@@ -190,6 +232,7 @@ const main = async () => {
 
   const GITHUB_BRANCH_BASE =
     process.env.GITHUB_BRANCH_BASE || argv.GITHUB_BRANCH_BASE || "main";
+
   const GITHUB_REVIEWERS =
     process.env.GITHUB_REVIEWERS || argv.GITHUB_REVIEWERS;
 
@@ -205,38 +248,56 @@ const main = async () => {
     file: SWAGGER_FILE,
   });
 
-  // create branch
-  await createBranch(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
-    branch: GITHUB_BRANCH,
-    baseBranch: GITHUB_BRANCH_BASE,
-  });
-
-  const updateItems = [];
-
   // create a file for each project
   await Promise.all(
-    listRes.map((item) => {
+    listRes.map(async (item) => {
       const { data, project, folder } = item;
-      updateItems.push(`${project}/${folder}`);
-      return createFile(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
-        branch: GITHUB_BRANCH,
+      if (!data) return;
+
+      // create branch
+      const newBranchName = `${GITHUB_BRANCH}/${project}/${folder}`;
+      await createBranch(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
+        branch: newBranchName,
+        baseBranch: GITHUB_BRANCH_BASE,
+      });
+
+      // create or update file
+      const fileRes = await createFile(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
+        branch: newBranchName,
         path: `${project}/${folder}/swagger.json`,
         content: data,
+        project,
+        folder,
       });
+
+      // remove branch if file not created or update
+      if (!fileRes) {
+        return await removeBranch(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
+          branch: newBranchName,
+        });
+      }
+
+      // create PR
+      const pull_number = await createPulls(
+        GITHUB_PAT,
+        GITHUB_USER,
+        GITHUB_REPO,
+        {
+          head: newBranchName,
+          base: GITHUB_BRANCH_BASE,
+          title: `feat: ${project}/${folder}`,
+        }
+      );
+
+      // assign reviewers
+      if (pull_number && GITHUB_REVIEWERS) {
+        await requestReviewer2Pull(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
+          reviewers: (GITHUB_REVIEWERS || "").split("|"),
+          pull_number,
+        });
+      }
     })
   );
-
-  // create PR
-  const { number } = await createPulls(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
-    head: GITHUB_BRANCH,
-    base: GITHUB_BRANCH_BASE,
-    title: `feat: ${updateItems.join(", ")}`,
-  });
-  // assign reviewers
-  await requestReviewer2Pull(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
-    reviewers: (GITHUB_REVIEWERS || "").split("|"),
-    pull_number: number,
-  });
 
   return "ok";
 };
