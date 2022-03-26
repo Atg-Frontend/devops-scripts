@@ -44,6 +44,7 @@ const checkArgv = async (argvArr) => {
 
 const GITHUB_PAT = process.env.GITHUB_PAT || argv.GITHUB_PAT;
 const GITHUB_URL = process.env.GITHUB_URL || argv.GITHUB_URL;
+const GITHUB_BRANCH = process.env.GITHUB_BRANCH || argv.GITHUB_BRANCH || "main";
 const FILE_PATH = process.env.FILE_PATH || argv.FILE_PATH;
 const FILE_URL = process.env.FILE_URL || argv.FILE_URL;
 
@@ -56,7 +57,7 @@ const baseUrl = `https://api.github.com/repos/atg-frontend/api-swagger-repos/con
 
 const res = await Promise.all(
   Object.entries(swagger).map(async ([key, val]) => {
-    const url = `${baseUrl}${val}`;
+    const url = `${baseUrl}${val}?ref=${GITHUB_BRANCH}`;
     const data = await getGitHubFileContent([
       `--GITHUB_URL=${url}`,
       `--GITHUB_PAT=${GITHUB_PAT}`,
