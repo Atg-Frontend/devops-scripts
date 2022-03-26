@@ -36,6 +36,22 @@ const apiCall = async (url, opt) => {
 
 // -- github api
 
+const getPullsByHeadBranchName = async ({
+  pat,
+  user,
+  repo,
+  state = "open",
+  headBranch,
+}) => {
+  const url = `https://api.github.com/repos/${user}/${repo}/pulls?state=${state}&head=${user}:refs/heads/${headBranch}`;
+  const res = await apiCall(url, {
+    headers: {
+      Authorization: `token ${pat}`,
+    },
+  });
+  return JSON.parse(res);
+};
+
 const createPulls = async (pat, user, repo, { head, base, title }) => {
   const url = `https://api.github.com/repos/${user}/${repo}/pulls`;
   const opt = {
@@ -139,7 +155,7 @@ const createFile = async (
   pat,
   user,
   repo,
-  { branch, path, content, project, folder } = {}
+  { branch, path, content, commitMessage } = {}
 ) => {
   // read file first to get sha if exist
   const { sha } = await readFile(pat, user, repo, {
@@ -147,9 +163,7 @@ const createFile = async (
     path,
   });
 
-  const message = sha
-    ? `feat: update ${project}/${folder} swagger.json`
-    : `feat: create ${project}/${folder} swagger.json`;
+  const message = commitMessage;
 
   const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
 
@@ -221,14 +235,7 @@ const main = async () => {
   const GITHUB_USER = process.env.GITHUB_USER || argv.GITHUB_USER;
   const GITHUB_REPO = process.env.GITHUB_REPO || argv.GITHUB_REPO;
   const GITHUB_BRANCH =
-    process.env.GITHUB_BRANCH ||
-    argv.GITHUB_BRANCH ||
-    `swaggerbot/${new Date()
-      .toISOString()
-      .split("-")
-      .join("")
-      .split(":")
-      .join("")}`;
+    process.env.GITHUB_BRANCH || argv.GITHUB_BRANCH || `swaggerbot`;
 
   const GITHUB_BRANCH_BASE =
     process.env.GITHUB_BRANCH_BASE || argv.GITHUB_BRANCH_BASE || "main";
@@ -254,24 +261,40 @@ const main = async () => {
       const { data, project, folder } = item;
       if (!data) return;
 
+      const {
+        info: { version },
+      } = JSON.parse(data);
+
+      if (!version) return;
+
       // create branch
-      const newBranchName = `${GITHUB_BRANCH}/${project}/${folder}`;
+      const newBranchName = `${GITHUB_BRANCH}/${project}/${folder}/${version}`;
       await createBranch(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
         branch: newBranchName,
         baseBranch: GITHUB_BRANCH_BASE,
       });
+
+      const commitMessage = `build: bump ${project}/${folder} to ${version}`;
 
       // create or update file
       const fileRes = await createFile(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
         branch: newBranchName,
         path: `${project}/${folder}/swagger.json`,
         content: data,
-        project,
-        folder,
+        commitMessage,
       });
 
       // remove branch if file not created or update
       if (!fileRes) {
+        // check current branch was pull request before
+        const prList = await getPullsByHeadBranchName({
+          pat: GITHUB_PAT,
+          user: GITHUB_USER,
+          repo: GITHUB_REPO,
+          headBranch: newBranchName,
+        });
+        if (prList.length) return;
+
         return await removeBranch(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
           branch: newBranchName,
         });
@@ -285,7 +308,7 @@ const main = async () => {
         {
           head: newBranchName,
           base: GITHUB_BRANCH_BASE,
-          title: `feat: ${project}/${folder}`,
+          title: commitMessage,
         }
       );
 
