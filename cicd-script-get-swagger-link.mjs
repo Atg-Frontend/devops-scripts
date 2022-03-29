@@ -1,5 +1,13 @@
 #!/usr/bin/env zx
 
+// -- base util
+
+const apiCall = async (url, opt) => {
+  let response = await fetch(url, opt);
+  const data = await response.text();
+  return data;
+};
+
 const outputDataToPipeline = async (key, val) => {
   // for azure pipeline
   $`echo ##vso[task.setvariable variable=${key}]${val}`;
@@ -21,6 +29,18 @@ const getFileContent = async ({ FILE_PATH, FILE_URL }) => {
 const runRemoteScript = async (url, envs = []) => {
   const res = await $`zx ${url} ${["--quiet", ...envs]}`;
   return res.stdout.trim();
+};
+
+const readFile = async (pat, user, repo, { branch = "main", path } = {}) => {
+  const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}?ref=${branch}`;
+
+  const opt = {
+    headers: { Authorization: `token ${pat}` },
+  };
+
+  const data = await apiCall(url, opt);
+
+  return JSON.parse(data);
 };
 
 const getGitHubFileContent = async (envs) => {
@@ -58,10 +78,19 @@ const baseUrl = `https://api.github.com/repos/atg-frontend/api-swagger-repos/con
 const res = await Promise.all(
   Object.entries(swagger).map(async ([key, val]) => {
     const url = `${baseUrl}${val}?ref=${GITHUB_BRANCH}`;
-    const data = await getGitHubFileContent([
-      `--GITHUB_URL=${url}`,
-      `--GITHUB_PAT=${GITHUB_PAT}`,
-    ]);
+    // const data = await getGitHubFileContent([
+    //   `--GITHUB_URL=${url}`,
+    //   `--GITHUB_PAT=${GITHUB_PAT}`,
+    // ]);
+    const data = await readFile(
+      GITHUB_PAT,
+      "atg-frontend",
+      "api-swagger-repos",
+      {
+        path: val,
+        branch: GITHUB_BRANCH,
+      }
+    );
     const { download_url } = data;
     await outputDataToPipeline(key, download_url);
     return {
