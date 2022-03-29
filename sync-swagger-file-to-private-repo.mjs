@@ -40,7 +40,7 @@ const getPullsByHeadBranchName = async ({
   pat,
   user,
   repo,
-  state = "open",
+  state = "all",
   headBranch,
 }) => {
   const url = `https://api.github.com/repos/${user}/${repo}/pulls?state=${state}&head=${user}:refs/heads/${headBranch}`;
