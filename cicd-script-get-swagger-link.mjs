@@ -35,7 +35,10 @@ const readFile = async (pat, user, repo, { branch = "main", path } = {}) => {
   const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}?ref=${branch}`;
 
   const opt = {
-    headers: { Authorization: `token ${pat}` },
+    headers: { 
+      Authorization: `token ${pat}`,
+      Accept: "application/json",
+     },
   };
 
   const data = await apiCall(url, opt);
