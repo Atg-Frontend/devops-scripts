@@ -31,19 +31,19 @@ const runRemoteScript = async (url, envs = []) => {
   return res.stdout.trim();
 };
 
-const readFile = async (pat, user, repo, { branch = "main", path } = {}) => {
+const downloadGithubFile = async (pat, user, repo, { branch = "main", path } = {}) => {
   const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}?ref=${branch}`;
 
   const opt = {
     headers: { 
       Authorization: `token ${pat}`,
-      Accept: "application/json",
+      Accept: "application/vnd.github.v3.raw",
      },
   };
 
   const data = await apiCall(url, opt);
 
-  return JSON.parse(data);
+  return data
 };
 
 const getGitHubFileContent = async (envs) => {
@@ -85,7 +85,7 @@ const res = await Promise.all(
     //   `--GITHUB_URL=${url}`,
     //   `--GITHUB_PAT=${GITHUB_PAT}`,
     // ]);
-    const data = await readFile(
+    const data = await downloadGithubFile(
       GITHUB_PAT,
       "atg-frontend",
       "api-swagger-repos",
@@ -94,14 +94,19 @@ const res = await Promise.all(
         branch: GITHUB_BRANCH,
       }
     );
-    const { download_url } = data;
-    await outputDataToPipeline(key, download_url);
+
+    // save data to pipeline
+    const path = `${key}.json`;
+    $`echo ${data} > ${path}`;
+
+    await outputDataToPipeline(key, path);
     return {
       key,
-      val: download_url,
+      val: path,
     };
   })
 );
+
 
 // for build script
 const azurePipelineScript = res
