@@ -97,7 +97,8 @@ const res = await Promise.all(
 
     // save data to pipeline
     const path = `${key}.json`;
-    $`echo ${data} > ${path}`;
+    // $`echo ${data} > ${path}`;
+    await fs.writeFile(path, data, "utf8");
 
     await outputDataToPipeline(key, path);
     return {
