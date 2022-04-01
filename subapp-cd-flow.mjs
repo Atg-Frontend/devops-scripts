@@ -40,7 +40,8 @@ const getCICDfile = async (path) => {
   return JSON.parse(file);
 };
 
-const downloadAzCopy = async ({ azCopyPath = "./", azCopyDownloadLink }) => {
+const downloadAzCopy = async ({ azCopyPath = "temp", azCopyDownloadLink }) => {
+  $`mkdir -p ${azCopyPath}`;
   const azCopySavePath = azCopyPath + "azcopy.tar.gz";
   const azCopyExecPath = azCopyPath + "azcopy";
 
@@ -97,7 +98,7 @@ const deploy2AzureBlob = async ({
   await azCopySyncFile2Blob({
     azCopyExecPath,
     azCopyArg: [
-      "--exclude-path=v",
+      "--exclude-path=v;temp",
       "--delete-destination=true",
       "--recursive=false",
     ],
