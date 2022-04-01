@@ -126,7 +126,9 @@ const main = async () => {
 
   const { folderPath } = await getFilesAndPaths(APP_BUILD_FOLDER_PATH);
 
-  const { assetPath, indexPath } = await getCICDfile(APP_CICD_FILE_PATH);
+  const { assetPath, indexPath } = await getCICDfile(
+    `${folderPath}/${APP_CICD_FILE_PATH}`
+  );
 
   await deploy2AzureBlob({
     azCopyDownloadLink: AZCOPY_DOWNLOAD_URL,
