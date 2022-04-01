@@ -52,9 +52,11 @@ const main = async () => {
     process.env.WEBPACK_FILE_PATH || argv.WEBPACK_FILE_PATH;
   const WEBPACK_REPLACE_KEY =
     process.env.WEBPACK_REPLACE_KEY || argv.WEBPACK_REPLACE_KEY;
+  const PACKAGE_FILE_PATH =
+    process.env.PACKAGE_FILE_PATH || argv.PACKAGE_FILE_PATH;
 
   // get app version
-  const { appVersion, version } = await getAppVersion("public/test.json");
+  const { appVersion, version } = await getAppVersion(PACKAGE_FILE_PATH);
 
   // build paths
   const indexPath = `${APP_PATH}`;
