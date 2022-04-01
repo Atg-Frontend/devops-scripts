@@ -87,7 +87,11 @@ const deploy2AzureBlob = async ({
   // update version folder
   await azCopySyncFile2Blob({
     azCopyExecPath,
-    azCopyArg: ["--recursive", "--delete-destination=true"],
+    azCopyArg: [
+      "--exclude-path=temp",
+      "--recursive",
+      "--delete-destination=true",
+    ],
     destPath: assetPath,
     uploadPath: folderPath,
     blobAccountName,
