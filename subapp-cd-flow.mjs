@@ -118,7 +118,7 @@ const main = async () => {
   const APP_BUILD_FOLDER_PATH =
     process.env.APP_BUILD_FOLDER_PATH || argv.APP_BUILD_FOLDER_PATH;
   const APP_CICD_FILE_PATH =
-    process.env.APP_CICD_FILE_PATH || argv.APP_CICD_FILE_PATH;
+    process.env.APP_CICD_FILE_PATH || argv.APP_CICD_FILE_PATH || "cicd.json";
   const AZCOPY_DOWNLOAD_URL =
     process.env.AZCOPY_DOWNLOAD_URL || argv.AZCOPY_DOWNLOAD_URL;
   const AZ_BLOB_ACC_NAME =
