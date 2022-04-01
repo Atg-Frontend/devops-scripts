@@ -41,7 +41,7 @@ const getCICDfile = async (path) => {
 };
 
 const downloadAzCopy = async ({ azCopyPath = "temp", azCopyDownloadLink }) => {
-  $`mkdir -p ${azCopyPath}`;
+  await $`mkdir -p ${azCopyPath}`;
   azCopyPath = `./${azCopyPath}/`;
   const azCopySavePath = azCopyPath + "azcopy.tar.gz";
   const azCopyExecPath = azCopyPath + "azcopy";
