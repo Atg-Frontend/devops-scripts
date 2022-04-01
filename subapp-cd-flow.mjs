@@ -40,10 +40,7 @@ const getCICDfile = async (path) => {
   return JSON.parse(file);
 };
 
-const downloadAzCopy = async ({
-  azCopyPath = "./build/",
-  azCopyDownloadLink,
-}) => {
+const downloadAzCopy = async ({ azCopyPath = "./", azCopyDownloadLink }) => {
   const azCopySavePath = azCopyPath + "azcopy.tar.gz";
   const azCopyExecPath = azCopyPath + "azcopy";
 
