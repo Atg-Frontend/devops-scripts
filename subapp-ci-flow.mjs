@@ -48,6 +48,9 @@ const main = async () => {
     process.env.APP_BUILD_VERSION || argv.APP_BUILD_VERSION;
   const APP_ENV = process.env.APP_ENV || argv.APP_ENV;
 
+  const APP_CICD_PATH =
+    process.env.APP_CICD_PATH || argv.APP_CICD_PATH || "public/cicd.json";
+
   const WEBPACK_FILE_PATH =
     process.env.WEBPACK_FILE_PATH || argv.WEBPACK_FILE_PATH;
   const WEBPACK_REPLACE_KEY =
@@ -83,7 +86,7 @@ const main = async () => {
   };
 
   // save output for CD flow
-  await fs.writeFile("cicd.json", JSON.stringify(output));
+  await fs.writeFile(APP_CICD_PATH, JSON.stringify(output));
 
   return "ok";
 };
