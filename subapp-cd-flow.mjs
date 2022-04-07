@@ -78,6 +78,8 @@ const deploy2AzureBlob = async ({
   blobSAS,
   assetPath,
   indexPath,
+  rootPath,
+  isRoot,
   folderPath,
 }) => {
   const { azCopyExecPath } = await downloadAzCopy({
@@ -112,6 +114,22 @@ const deploy2AzureBlob = async ({
     blobAccountName,
     blobSAS,
   });
+
+  // update index folder
+  if (isRoot) await azCopySyncFile2Blob({
+    azCopyExecPath,
+    azCopyArg: [
+      "--exclude-path=v;temp",
+      "--delete-destination=true",
+      "--recursive=false",
+    ],
+    destPath: rootPath,
+    uploadPath: folderPath,
+    blobAccountName,
+    blobSAS,
+  });
+
+  
 };
 
 // -- main
@@ -127,9 +145,12 @@ const main = async () => {
   const AZ_BLOB_SAS_TOKEN =
     process.env.AZ_BLOB_SAS_TOKEN || argv.AZ_BLOB_SAS_TOKEN;
 
+  const APP_IS_ROOT_VERSION =
+    process.env.APP_IS_ROOT_VERSION || argv.APP_IS_ROOT_VERSION;
+
   const { folderPath } = await getFilesAndPaths(APP_BUILD_FOLDER_PATH);
 
-  const { assetPath, indexPath } = await getCICDfile(
+  const { assetPath, indexPath, APP_PATH } = await getCICDfile(
     `${folderPath}/${APP_CICD_FILE_PATH}`
   );
 
@@ -137,6 +158,8 @@ const main = async () => {
     azCopyDownloadLink: AZCOPY_DOWNLOAD_URL,
     assetPath,
     indexPath,
+    rootPath: APP_PATH,
+    isRoot, APP_IS_ROOT_VERSION,
     folderPath,
     blobAccountName: AZ_BLOB_ACC_NAME,
     blobSAS: AZ_BLOB_SAS_TOKEN,
