@@ -63,7 +63,7 @@ const main = async () => {
 
   // build paths
   const indexPath = `${APP_PATH}`;
-  const assetPath = `${indexPath}/v/${APP_ENV}.${appVersion}.${APP_BUILD_VERSION}`;
+  const assetPath = `${indexPath}/${APP_ENV}/v/${appVersion}.${APP_BUILD_VERSION}`;
   const publicPath = `${APP_DOMAIN}${assetPath}`;
 
   // change webpack config: publicPath
