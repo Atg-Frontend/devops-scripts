@@ -116,7 +116,7 @@ const deploy2AzureBlob = async ({
   });
 
   // update index folder
-  if (isRoot) await azCopySyncFile2Blob({
+  if (isRoot && Boolean(isRoot) === true) await azCopySyncFile2Blob({
     azCopyExecPath,
     azCopyArg: [
       "--exclude-path=v;temp",
@@ -159,7 +159,7 @@ const main = async () => {
     assetPath,
     indexPath,
     rootPath: APP_PATH,
-    isRoot, APP_IS_ROOT_VERSION,
+    isRoot: APP_IS_ROOT_VERSION || false,
     folderPath,
     blobAccountName: AZ_BLOB_ACC_NAME,
     blobSAS: AZ_BLOB_SAS_TOKEN,
