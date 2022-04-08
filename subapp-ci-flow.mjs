@@ -62,7 +62,7 @@ const main = async () => {
   const { appVersion, version } = await getAppVersion(PACKAGE_FILE_PATH);
 
   // build paths
-  const indexPath = `${APP_PATH}/${APP_ENV}`;
+  const indexPath = `${APP_PATH === "/" ? APP_PATH : APP_PATH + "/" }${APP_ENV}`;
   const assetPath = `${indexPath}/v/${appVersion}.${APP_BUILD_VERSION}`;
   const publicPath = `${APP_DOMAIN}${assetPath}`;
 
