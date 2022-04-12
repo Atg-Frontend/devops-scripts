@@ -52,6 +52,30 @@ const getPullsByHeadBranchName = async ({
   return JSON.parse(res);
 };
 
+const getAllPulls = async ({ pat, user, repo, state = "all", headBranch }) => {
+  const url = `https://api.github.com/repos/${user}/${repo}/pulls?state=${state}`;
+  const res = await apiCall(url, {
+    headers: {
+      Authorization: `token ${pat}`,
+    },
+  });
+  return JSON.parse(res);
+};
+
+const closePullRequest = async ({ pat, user, repo, number }) => {
+  const url = `https://api.github.com/repos/${user}/${repo}/pulls/${number}`;
+  const res = await apiCall(url, {
+    method: "PATCH",
+    headers: {
+      Authorization: `token ${pat}`,
+    },
+    body: JSON.stringify({
+      state: "closed",
+    }),
+  });
+  return JSON.parse(res);
+};
+
 const createPulls = async (pat, user, repo, { head, base, title }) => {
   const url = `https://api.github.com/repos/${user}/${repo}/pulls`;
   const opt = {
@@ -274,7 +298,8 @@ const main = async () => {
         baseBranch: GITHUB_BRANCH_BASE,
       });
 
-      const commitMessage = `build: bump ${project}/${folder} to ${version}`;
+      const commitKey = `${project}/${folder} `;
+      const commitMessage = `build: bump ${commitKey} to ${version}`;
 
       // create or update file
       const fileRes = await createFile(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
@@ -292,15 +317,41 @@ const main = async () => {
           user: GITHUB_USER,
           repo: GITHUB_REPO,
           headBranch: newBranchName,
+          state: "all",
         });
         if (prList.length) return;
-
+        console.log(`remove branch ${newBranchName}`);
         return await removeBranch(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
           branch: newBranchName,
         });
+      } else {
+        // check if there was older version is PR-ing and close it if yes
+        const prList = await getAllPulls({
+          pat: GITHUB_PAT,
+          user: GITHUB_USER,
+          repo: GITHUB_REPO,
+          state: "open",
+        });
+        if (!prList.length) return;
+
+        console.log(`close opening PR`);
+        await Promise.all(
+          prList
+            .filter((f) => f.title.indexOf(commitKey) !== -1)
+            .map((pr) => {
+              const { number } = pr;
+              return closePullRequest({
+                pat: GITHUB_PAT,
+                user: GITHUB_USER,
+                repo: GITHUB_REPO,
+                number,
+              });
+            })
+        );
       }
 
       // create PR
+      console.log(`create PR`);
       const pull_number = await createPulls(
         GITHUB_PAT,
         GITHUB_USER,
