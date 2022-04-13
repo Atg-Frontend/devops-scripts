@@ -82,7 +82,7 @@ const useReleaseFlow = async ({
   githubRepo,
   githubBranch,
   githubPath,
-  isPush2GitHub = false,
+  isPushCodeBranch = false,
 }) => {
   // create swaggerPath if not exists
   await $`mkdir -p ${swaggerPath}`;
@@ -108,13 +108,13 @@ const useReleaseFlow = async ({
     await fs.writeFile(filePath, dataSwagger, "utf8");
 
     // git commit and push to github
-    if (isPush2GitHub) {
+    if (isPushCodeBranch) {
       // set user and email
       await $`git config --global user.name "ATG_CICD"`;
       await $`git config --global user.email "ATG_CICD@atg.ai"`;
       await $`git add ${filePath}`;
       await $`git commit -m "update swagger.json [skip ci]"`;
-      await $`git push origin ${githubBranch}`;
+      await $`git push origin ${isPushCodeBranch}`;
     }
   }
 
@@ -126,7 +126,8 @@ const GITHUB_BRANCH = process.env.GITHUB_BRANCH || argv.GITHUB_BRANCH || "main";
 const FILE_PATH = process.env.FILE_PATH || argv.FILE_PATH;
 const FILE_URL = process.env.FILE_URL || argv.FILE_URL;
 
-const IS_PUSH_CODE = process.env.IS_PUSH_CODE || argv.IS_PUSH_CODE;
+const IS_PUSH_CODE_BRANCH =
+  process.env.IS_PUSH_CODE_BRANCH || argv.IS_PUSH_CODE_BRANCH;
 
 await checkArgv(["GITHUB_PAT"]);
 
@@ -143,7 +144,7 @@ const res = await Promise.all(
       githubUser: "atg-frontend",
       githubRepo: "api-swagger-repos",
       githubBranch: GITHUB_BRANCH,
-      isPush2GitHub: IS_PUSH_CODE,
+      isPushCodeBranch: IS_PUSH_CODE_BRANCH,
     });
 
     await outputDataToPipeline(fileKey, filePath);
