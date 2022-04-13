@@ -120,7 +120,7 @@ const removeBranch = async (pat, user, repo, { branch }) => {
   };
 
   const data = await apiCall(url, opt);
-  console.log(`${branch} branch was removed`);
+  console.log("[removeBranch]: ", `${branch} branch was removed`);
   return data;
 };
 
@@ -157,6 +157,7 @@ const createBranch = async (pat, user, repo, { branch, baseBranch }) => {
   const { ref } = JSON.parse(data);
 
   console.log(
+    "[createBranch]: ",
     ref ? `create branch ${branch} success.` : `${branch} branch already exist`
   );
 
@@ -212,7 +213,10 @@ const createFile = async (
 
   // compare sha & new sha
   if (sha && newSha && sha === newSha) {
-    console.log(`${path} is same as old content. skip`);
+    console.log("[createFile]: ", `${path} is same as old content. skip`, {
+      sha,
+      newSha,
+    });
     return false;
   } else {
     return true;
@@ -252,6 +256,34 @@ const getSwagger = async ({ url, file }) => {
   }
 };
 
+const evtCloseOpeningPR = async ({ pat, user, repo, commitKey }) => {
+  // check if there was older version is PR-ing and close it if yes
+  const prList = await getAllPulls({
+    pat,
+    user,
+    repo,
+    state: "open",
+  });
+  if (!prList.length) return;
+
+  // find by title
+  const avaPrList = prList.filter((f) => f.title.indexOf(commitKey) !== -1);
+  if (!avaPrList.length) return;
+
+  return Promise.all(
+    avaPrList.map((pr) => {
+      const { number } = pr;
+      console.log("[closeOpeningPR]: ", number);
+      return closePullRequest({
+        pat,
+        user,
+        repo,
+        number,
+      });
+    })
+  );
+};
+
 // -- main
 const main = async () => {
   const GITHUB_PAT = process.env.GITHUB_PAT || argv.GITHUB_PAT;
@@ -284,11 +316,13 @@ const main = async () => {
       const { data, project, folder } = item;
       if (!data) return;
 
-      const {
+      let {
         info: { version },
       } = JSON.parse(data);
 
       if (!version) return;
+      // trim version, e.g  "1.0.0-16 | 1.0"
+      version = version.split(" ")[0].trim();
 
       // create branch
       const newBranchName = `${GITHUB_BRANCH}/${project}/${folder}/${version}`;
@@ -308,7 +342,7 @@ const main = async () => {
         commitMessage,
       });
 
-      // remove branch if file not created or update
+      // remove branch if file create file or content keep same
       if (!fileRes) {
         // check current branch was pull request before
         const prList = await getPullsByHeadBranchName({
@@ -318,42 +352,25 @@ const main = async () => {
           headBranch: newBranchName,
           state: "all",
         });
+        // just skip ALL flow if PR before
         if (prList.length) return;
-        console.log(`remove branch ${newBranchName}`);
+
+        // remove branch if no PR before
         return await removeBranch(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
           branch: newBranchName,
         });
-      } else {
-        // check if there was older version is PR-ing and close it if yes
-        const prList = await getAllPulls({
-          pat: GITHUB_PAT,
-          user: GITHUB_USER,
-          repo: GITHUB_REPO,
-          state: "open",
-        });
-        if (!prList.length) return;
-
-        const avaPrList = prList.filter(
-          (f) => f.title.indexOf(commitKey) !== -1
-        );
-        if (!avaPrList.length) return;
-
-        console.log(`Found opening PR and close`);
-        await Promise.all(
-          avaPrList.map((pr) => {
-            const { number } = pr;
-            return closePullRequest({
-              pat: GITHUB_PAT,
-              user: GITHUB_USER,
-              repo: GITHUB_REPO,
-              number,
-            });
-          })
-        );
       }
 
+      // close older PR
+      await evtCloseOpeningPR({
+        pat: GITHUB_PAT,
+        user: GITHUB_USER,
+        repo: GITHUB_REPO,
+        commitKey,
+      });
+
       // create PR
-      console.log(`create PR`);
+      console.log("[create PR]: ", newBranchName);
       const pull_number = await createPulls(
         GITHUB_PAT,
         GITHUB_USER,
