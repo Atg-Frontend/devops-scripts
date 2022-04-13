@@ -74,20 +74,15 @@ const checkArgv = async (argvArr) => {
   ]);
 };
 
-const useReleaseFlow = async ({
-  swaggerPath = "swagger",
+const loadOrFetchSwaggerFile = async ({
+  swaggerPath,
   swaggerKey,
   githubPAT,
   githubUser,
   githubRepo,
   githubBranch,
   githubPath,
-  isPushCodeBranch = false,
 }) => {
-  // create swaggerPath if not exists
-  await $`mkdir -p ${swaggerPath}`;
-  swaggerPath = `./${swaggerPath}`;
-
   // check if swagger.json found at swagger path
   const filePath = `${swaggerPath}/${swaggerKey}.json`;
   const isFound = await getFileContent({ FILE_PATH: filePath });
@@ -106,19 +101,34 @@ const useReleaseFlow = async ({
 
     // write swagger.json to local
     await fs.writeFile(filePath, dataSwagger, "utf8");
-
-    // git commit and push to github
-    if (isPushCodeBranch) {
-      // set user and email
-      await $`git config --global user.name "ATG_CICD"`;
-      await $`git config --global user.email "ATG_CICD@atg.ai"`;
-      await $`git add ${filePath}`;
-      await $`git commit -m "update swagger.json [skip ci]"`;
-      await $`git push`;
-    }
   }
 
   return [swaggerKey, filePath];
+};
+
+const pushCodeToRemote = async ({ fileArr, remoteBranch, allowPrefixArr }) => {
+  const isAllow = allowPrefixArr.find((prefix) =>
+    remoteBranch.includes(prefix)
+  );
+  if (!isAllow) {
+    console.log("skip to push code to remote");
+    return;
+  }
+  // set git user and email
+  await $`git config --global user.name "ZX_USER"`;
+  await $`git config --global user.email "ZX_USER@atg.ai"`;
+
+  // checkout branch
+  await $`git checkout ${remoteBranch.replace("refs/heads/", "")}`;
+
+  // git add spec files
+  for (let index = 0; index < fileArr.length; index++) {
+    const [, filePath] = fileArr[index];
+    await $`git add ${filePath}`;
+  }
+  await $`git commit -m "update swagger.json [skip ci]"`;
+
+  await $`git push`;
 };
 
 const GITHUB_PAT = process.env.GITHUB_PAT || argv.GITHUB_PAT;
@@ -126,37 +136,54 @@ const GITHUB_BRANCH = process.env.GITHUB_BRANCH || argv.GITHUB_BRANCH || "main";
 const FILE_PATH = process.env.FILE_PATH || argv.FILE_PATH;
 const FILE_URL = process.env.FILE_URL || argv.FILE_URL;
 
-const IS_PUSH_CODE_BRANCH =
-  process.env.IS_PUSH_CODE_BRANCH || argv.IS_PUSH_CODE_BRANCH;
+const REMOTE_PUSH_BRANCH =
+  process.env.REMOTE_PUSH_BRANCH || argv.REMOTE_PUSH_BRANCH;
+
+const REMOTE_PUSH_BRANCH_ALLOW_PREFIX_ARR = process.env
+  .REMOTE_PUSH_BRANCH_ALLOW_PREFIX_ARR ||
+  argv.REMOTE_PUSH_BRANCH_ALLOW_PREFIX_ARR || ["uat/", "prd/"];
 
 await checkArgv(["GITHUB_PAT"]);
 
 const { swagger } = JSON.parse(await getFileContent({ FILE_URL, FILE_PATH }));
 if (!swagger) throw new Error("Cannot find key: swagger");
 
-const res = await Promise.all(
-  Object.entries(swagger).map(async ([key, val]) => {
-    const [fileKey, filePath] = await useReleaseFlow({
-      swaggerPath: "swagger",
+// create swagger dir if not exists
+let swaggerPath = "swagger";
+await $`mkdir -p ${swaggerPath}`;
+swaggerPath = `./${swaggerPath}`;
+
+const fileArr = await Promise.all(
+  Object.entries(swagger).map(([key, val]) => {
+    return loadOrFetchSwaggerFile({
+      swaggerPath: swaggerPath,
       swaggerKey: key,
       githubPath: val,
       githubPAT: GITHUB_PAT,
       githubUser: "atg-frontend",
       githubRepo: "api-swagger-repos",
       githubBranch: GITHUB_BRANCH,
-      isPushCodeBranch: IS_PUSH_CODE_BRANCH,
     });
+  })
+);
 
-    await outputDataToPipeline(fileKey, filePath);
-    return {
-      key: fileKey,
-      val: filePath,
-    };
+if (REMOTE_PUSH_BRANCH)
+  await pushCodeToRemote({
+    fileArr,
+    remoteBranch: REMOTE_PUSH_BRANCH,
+    allowPrefixArr: REMOTE_PUSH_BRANCH_ALLOW_PREFIX_ARR,
+  });
+
+// write output to pipeline
+await Promise.all(
+  Object.entries(fileArr).map(([key, val]) => {
+    return outputDataToPipeline(key, val);
   })
 );
 
 // for build script
-const azurePipelineScript = res
-  .map(({ key, val }) => `"${key}=${val}"`)
+const azurePipelineScript = fileArr
+  .map(([key, val]) => `"${key}=${val}"`)
   .join(" ");
+
 outputDataToPipeline("AZURE_CICD_SCRIPT", azurePipelineScript);
