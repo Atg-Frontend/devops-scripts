@@ -208,9 +208,7 @@ const createFile = async (
   const data = await apiCall(url, opt);
 
   const jsonData = JSON.parse(data);
-  const {
-    content: { sha: newSha },
-  } = jsonData || { content: {} };
+  const newSha = jsonData?.content?.sha;
 
   // compare sha & new sha
   if (sha && newSha && sha === newSha) {
