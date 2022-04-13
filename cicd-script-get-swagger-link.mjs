@@ -130,11 +130,9 @@ await checkArgv(["GITHUB_PAT"]);
 const { swagger } = JSON.parse(await getFileContent({ FILE_URL, FILE_PATH }));
 if (!swagger) throw new Error("Cannot find key: swagger");
 
-const baseUrl = `https://api.github.com/repos/atg-frontend/api-swagger-repos/contents/`;
-
 const res = await Promise.all(
   Object.entries(swagger).map(async ([key, val]) => {
-    const [key, path] = await useReleaseFlow({
+    const [fileKey, filePath] = await useReleaseFlow({
       swaggerPath: "swagger",
       swaggerKey: key,
       githubPath: val,
@@ -145,10 +143,10 @@ const res = await Promise.all(
       isPush2GitHub: IS_PUSH_CODE,
     });
 
-    await outputDataToPipeline(key, path);
+    await outputDataToPipeline(fileKey, filePath);
     return {
-      key,
-      val: path,
+      key: fileKey,
+      val: filePath,
     };
   })
 );
