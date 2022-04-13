@@ -109,6 +109,9 @@ const useReleaseFlow = async ({
 
     // git commit and push to github
     if (isPush2GitHub) {
+      // set user and email
+      await $`git config user.name "ATG_CICD"`;
+      await $`git config user.email "ATG_CICD@atg.ai"`;
       await $`git add ${filePath}`;
       await $`git commit -m "update swagger.json [skip ci]"`;
       await $`git push origin ${githubBranch}`;
