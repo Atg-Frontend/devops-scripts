@@ -207,12 +207,13 @@ const createFile = async (
 
   const data = await apiCall(url, opt);
 
+  const jsonData = JSON.parse(data);
   const {
     content: { sha: newSha },
-  } = JSON.parse(data);
+  } = jsonData || { content: {} };
 
   // compare sha & new sha
-  if (sha && sha === newSha) {
+  if (sha && newSha && sha === newSha) {
     console.log(`${path} is same as old content. skip`);
     return false;
   } else {
