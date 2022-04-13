@@ -16,13 +16,17 @@ const outputDataToPipeline = async (key, val) => {
 };
 
 const getFileContent = async ({ FILE_PATH, FILE_URL }) => {
-  if (FILE_PATH) {
-    return await fs.readFile(FILE_PATH, "utf8");
-  } else if (FILE_URL) {
-    const res = await fetch(FILE_URL);
-    return res.text();
-  } else {
-    throw new Error("FILE_PATH or FILE_URL is not set.");
+  try {
+    if (FILE_PATH) {
+      return await fs.readFile(FILE_PATH, "utf8");
+    } else if (FILE_URL) {
+      const res = await fetch(FILE_URL);
+      return res.text();
+    } else {
+      throw new Error("FILE_PATH or FILE_URL is not set.");
+    }
+  } catch (error) {
+    return false;
   }
 };
 
@@ -31,19 +35,24 @@ const runRemoteScript = async (url, envs = []) => {
   return res.stdout.trim();
 };
 
-const downloadGithubFile = async (pat, user, repo, { branch = "main", path } = {}) => {
+const downloadGithubFile = async (
+  pat,
+  user,
+  repo,
+  { branch = "main", path } = {}
+) => {
   const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}?ref=${branch}`;
 
   const opt = {
-    headers: { 
+    headers: {
       Authorization: `token ${pat}`,
       Accept: "application/vnd.github.v3.raw",
-     },
+    },
   };
 
   const data = await apiCall(url, opt);
 
-  return data
+  return data;
 };
 
 const getGitHubFileContent = async (envs) => {
@@ -65,11 +74,56 @@ const checkArgv = async (argvArr) => {
   ]);
 };
 
+const useReleaseFlow = async ({
+  swaggerPath = "swagger",
+  swaggerKey,
+  githubPAT,
+  githubUser,
+  githubRepo,
+  githubBranch,
+  githubPath,
+  isPush2GitHub = false,
+}) => {
+  // create swaggerPath if not exists
+  await $`mkdir -p ${swaggerPath}`;
+  swaggerPath = `./${swaggerPath}`;
+
+  // check if swagger.json found at swagger path
+  const filePath = `${swaggerPath}/${swaggerKey}.json`;
+  const isFound = await getFileContent({ FILE_PATH: filePath });
+  if (!isFound) {
+    // get swagger.json from github
+    const dataSwagger = await downloadGithubFile(
+      githubPAT,
+      githubUser,
+      githubRepo,
+      {
+        path: githubPath,
+        branch: githubBranch,
+      }
+    );
+    if (!dataSwagger) throw new Error("swagger.json not found in github.");
+
+    // write swagger.json to local
+    await fs.writeFile(filePath, dataSwagger, "utf8");
+
+    // git commit and push to github
+    if (isPush2GitHub) {
+      await $`git add ${filePath}`;
+      await $`git commit -m "update swagger.json [skip ci]"`;
+      await $`git push origin ${githubBranch}`;
+    }
+  }
+
+  return [swaggerKey, filePath];
+};
+
 const GITHUB_PAT = process.env.GITHUB_PAT || argv.GITHUB_PAT;
-const GITHUB_URL = process.env.GITHUB_URL || argv.GITHUB_URL;
 const GITHUB_BRANCH = process.env.GITHUB_BRANCH || argv.GITHUB_BRANCH || "main";
 const FILE_PATH = process.env.FILE_PATH || argv.FILE_PATH;
 const FILE_URL = process.env.FILE_URL || argv.FILE_URL;
+
+const IS_PUSH_CODE = process.env.IS_PUSH_CODE || argv.IS_PUSH_CODE;
 
 await checkArgv(["GITHUB_PAT"]);
 
@@ -80,25 +134,16 @@ const baseUrl = `https://api.github.com/repos/atg-frontend/api-swagger-repos/con
 
 const res = await Promise.all(
   Object.entries(swagger).map(async ([key, val]) => {
-    const url = `${baseUrl}${val}?ref=${GITHUB_BRANCH}`;
-    // const data = await getGitHubFileContent([
-    //   `--GITHUB_URL=${url}`,
-    //   `--GITHUB_PAT=${GITHUB_PAT}`,
-    // ]);
-    const data = await downloadGithubFile(
-      GITHUB_PAT,
-      "atg-frontend",
-      "api-swagger-repos",
-      {
-        path: val,
-        branch: GITHUB_BRANCH,
-      }
-    );
-
-    // save data to pipeline
-    const path = `${key}.json`;
-    // $`echo ${data} > ${path}`;
-    await fs.writeFile(path, data, "utf8");
+    const [key, path] = await useReleaseFlow({
+      swaggerPath: "swagger",
+      swaggerKey: key,
+      githubPath: val,
+      githubPAT: GITHUB_PAT,
+      githubUser: "atg-frontend",
+      githubRepo: "api-swagger-repos",
+      githubBranch: GITHUB_BRANCH,
+      isPush2GitHub: IS_PUSH_CODE,
+    });
 
     await outputDataToPipeline(key, path);
     return {
@@ -107,7 +152,6 @@ const res = await Promise.all(
     };
   })
 );
-
 
 // for build script
 const azurePipelineScript = res
