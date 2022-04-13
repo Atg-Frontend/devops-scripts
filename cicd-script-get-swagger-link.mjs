@@ -114,7 +114,7 @@ const useReleaseFlow = async ({
       await $`git config --global user.email "ATG_CICD@atg.ai"`;
       await $`git add ${filePath}`;
       await $`git commit -m "update swagger.json [skip ci]"`;
-      await $`git push origin ${isPushCodeBranch}`;
+      await $`git push`;
     }
   }
 
