@@ -333,19 +333,22 @@ const main = async () => {
         });
         if (!prList.length) return;
 
-        console.log(`close opening PR`);
+        const avaPrList = prList.filter(
+          (f) => f.title.indexOf(commitKey) !== -1
+        );
+        if (!avaPrList.length) return;
+
+        console.log(`Found opening PR and close`);
         await Promise.all(
-          prList
-            .filter((f) => f.title.indexOf(commitKey) !== -1)
-            .map((pr) => {
-              const { number } = pr;
-              return closePullRequest({
-                pat: GITHUB_PAT,
-                user: GITHUB_USER,
-                repo: GITHUB_REPO,
-                number,
-              });
-            })
+          avaPrList.map((pr) => {
+            const { number } = pr;
+            return closePullRequest({
+              pat: GITHUB_PAT,
+              user: GITHUB_USER,
+              repo: GITHUB_REPO,
+              number,
+            });
+          })
         );
       }
 
