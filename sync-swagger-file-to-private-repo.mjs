@@ -356,9 +356,10 @@ const main = async () => {
         if (prList.length) return;
 
         // remove branch if no PR before
-        return await removeBranch(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
+        await removeBranch(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
           branch: newBranchName,
         });
+        return;
       }
 
       // close older PR
