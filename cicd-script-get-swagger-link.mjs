@@ -103,7 +103,7 @@ const loadOrFetchSwaggerFile = async ({
     await fs.writeFile(filePath, dataSwagger, "utf8");
   }
 
-  return [swaggerKey, filePath];
+  return [swaggerKey, filePath, isFound];
 };
 
 const pushCodeToRemote = async ({ fileArr, remoteBranch, allowPrefixArr }) => {
@@ -114,6 +114,18 @@ const pushCodeToRemote = async ({ fileArr, remoteBranch, allowPrefixArr }) => {
     console.log("skip to push code to remote");
     return;
   }
+
+  if (!fileArr || fileArr.length === 0 ){
+    console.log("skip to push code to remote", 'fileArr is empty');
+    return;
+  }
+
+  const newFile2Push = fileArr.filter(([,,isLocalFile]) => !isLocalFile);
+  if (newFile2Push.length === 0) {
+    console.log("skip to push code to remote", 'no new file to push');
+    return;
+  }
+
   // set git user and email
   await $`git config --global user.name "ZX_USER"`;
   await $`git config --global user.email "ZX_USER@atg.ai"`;
