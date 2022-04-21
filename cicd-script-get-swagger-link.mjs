@@ -116,13 +116,13 @@ const pushCodeToRemote = async ({ fileArr, remoteBranch, allowPrefixArr }) => {
   }
 
   if (!fileArr || fileArr.length === 0 ){
-    console.log("skip to push code to remote", 'fileArr is empty');
+    console.log("[skip to push code to remote]: ", 'fileArr is empty');
     return;
   }
 
   const newFile2Push = fileArr.filter(([,,isLocalFile]) => !isLocalFile);
   if (newFile2Push.length === 0) {
-    console.log("skip to push code to remote", 'no new file to push');
+    console.log("[skip to push code to remote]: ", 'no new file to push');
     return;
   }
 
@@ -134,8 +134,8 @@ const pushCodeToRemote = async ({ fileArr, remoteBranch, allowPrefixArr }) => {
   await $`git checkout ${remoteBranch.replace("refs/heads/", "")}`;
 
   // git add spec files
-  for (let index = 0; index < fileArr.length; index++) {
-    const [, filePath] = fileArr[index];
+  for (let index = 0; index < newFile2Push.length; index++) {
+    const [, filePath] = newFile2Push[index];
     await $`git add ${filePath}`;
   }
   await $`git diff-index --quiet HEAD || git commit -m "update swagger.json [skip ci]"`;
