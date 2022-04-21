@@ -112,18 +112,18 @@ const pushCodeToRemote = async ({ fileArr, remoteBranch, allowPrefixArr }) => {
   );
   if (!isAllow) {
     console.log("skip to push code to remote");
-    return;
+    return false;
   }
 
   if (!fileArr || fileArr.length === 0 ){
     console.log("[skip to push code to remote]: ", 'fileArr is empty');
-    return;
+    return false;
   }
 
   const newFile2Push = fileArr.filter(([,,isLocalFile]) => !isLocalFile);
   if (newFile2Push.length === 0) {
     console.log("[skip to push code to remote]: ", 'no new file to push');
-    return;
+    return false;
   }
 
   // set git user and email
