@@ -137,9 +137,9 @@ const pushCodeToRemote = async ({ fileArr, remoteBranch, allowPrefixArr }) => {
 		const [, filePath] = fileArr[index];
 		await $`git add ${filePath}`;
 	}
-	await $`git diff-index --quiet HEAD || git commit -m "update swagger.json [skip ci]"`;
+	await $`git commit -m "update swagger.json [skip ci]"`;
 
-	await $`git diff-index --quiet HEAD || git push`;
+	await $`git push`;
 };
 
 const GITHUB_PAT = process.env.GITHUB_PAT || argv.GITHUB_PAT;
