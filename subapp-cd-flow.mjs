@@ -67,8 +67,16 @@ const azCopySyncFile2Blob = async ({
   uploadPath,
   azCopyArg,
 }) => {
-  const destUrl = `https://${blobAccountName}.blob.core.windows.net/${blobContainerName}${destPath}${blobSAS}`;
-  return $`${azCopyExecPath} sync ${uploadPath} ${destUrl} ${azCopyArg}`;
+  const getDestUrl = (filePath) => {
+    return `https://${blobAccountName}.blob.core.windows.net/${blobContainerName}${filePath}${blobSAS}`;
+  };
+  await $`${azCopyExecPath} sync ${uploadPath} ${getDestUrl(
+    destPath
+  )} ${azCopyArg}`;
+  // update index.html file
+  await $`${azCopyExecPath} copy ${uploadPath + "/index.html"} ${getDestUrl(
+    destPath + "/index.html"
+  )} ${["--cache-control=max-age=0, must-revalidate"]}`;
 };
 
 const deploy2AzureBlob = async ({
