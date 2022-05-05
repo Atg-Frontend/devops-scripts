@@ -68,6 +68,8 @@ const azCopySyncFile2Blob = async ({
   azCopyArg,
 }) => {
   const getDestUrl = (filePath) => {
+    // remove //
+    filePath = filePath.replace(/\/\//g, "/");
     return `https://${blobAccountName}.blob.core.windows.net/${blobContainerName}${filePath}${blobSAS}`;
   };
   await $`${azCopyExecPath} sync ${uploadPath} ${getDestUrl(
