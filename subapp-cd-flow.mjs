@@ -35,9 +35,13 @@ const getFilesAndPaths = async (path) => {
 };
 
 const getCICDfile = async (path) => {
-  path = path || "cicd.json";
-  const file = await fs.readFileSync(path);
-  return JSON.parse(file);
+  try {
+    path = path || "cicd.json";
+    const file = await fs.readFileSync(path);
+    return JSON.parse(file);
+  } catch (error) {
+    return {};
+  }
 };
 
 const downloadAzCopy = async ({ azCopyPath = "temp", azCopyDownloadLink }) => {
@@ -99,18 +103,19 @@ const deploy2AzureBlob = async ({
   });
 
   // update version folder
-  await azCopySyncFile2Blob({
-    azCopyExecPath,
-    azCopyArg: [
-      "--exclude-path=temp",
-      "--recursive",
-      "--delete-destination=true",
-    ],
-    destPath: assetPath,
-    uploadPath: folderPath,
-    blobAccountName,
-    blobSAS,
-  });
+  if (assetPath)
+    await azCopySyncFile2Blob({
+      azCopyExecPath,
+      azCopyArg: [
+        "--exclude-path=temp",
+        "--recursive",
+        "--delete-destination=true",
+      ],
+      destPath: assetPath,
+      uploadPath: folderPath,
+      blobAccountName,
+      blobSAS,
+    });
 
   // update latest folder
   if (latestPath) {
@@ -129,18 +134,19 @@ const deploy2AzureBlob = async ({
   }
 
   // update index folder
-  await azCopySyncFile2Blob({
-    azCopyExecPath,
-    azCopyArg: [
-      "--exclude-path=v;temp",
-      "--delete-destination=true",
-      "--recursive=false",
-    ],
-    destPath: indexPath,
-    uploadPath: folderPath,
-    blobAccountName,
-    blobSAS,
-  });
+  if (indexPath)
+    await azCopySyncFile2Blob({
+      azCopyExecPath,
+      azCopyArg: [
+        "--exclude-path=v;temp",
+        "--delete-destination=true",
+        "--recursive=false",
+      ],
+      destPath: indexPath,
+      uploadPath: folderPath,
+      blobAccountName,
+      blobSAS,
+    });
 
   // update root folder
   if (isRoot && Boolean(isRoot) === true) {
