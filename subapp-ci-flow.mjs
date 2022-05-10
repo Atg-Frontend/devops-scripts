@@ -67,7 +67,7 @@ const main = async () => {
   const indexPath = `${APP_PATH === "/" ? APP_PATH : APP_PATH + "/"}${APP_ENV}`;
   // APP_NO_VERSION for non env app deployment
   const assetPath = APP_NO_VERSION
-    ? ""
+    ? `${indexPath}`
     : `${indexPath}/v/${appVersion}.${APP_BUILD_VERSION}`;
   const latestPath = assetPath ? `${indexPath}/v/latest` : "";
   const publicPath = `${APP_DOMAIN}${assetPath}`;
