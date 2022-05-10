@@ -47,6 +47,7 @@ const main = async () => {
   const APP_BUILD_VERSION =
     process.env.APP_BUILD_VERSION || argv.APP_BUILD_VERSION;
   const APP_ENV = process.env.APP_ENV || argv.APP_ENV;
+  const APP_NO_VERSION = process.env.APP_NO_VERSION || argv.APP_NO_VERSION;
 
   const APP_CICD_PATH =
     process.env.APP_CICD_PATH || argv.APP_CICD_PATH || "public/cicd.json";
@@ -62,9 +63,13 @@ const main = async () => {
   const { appVersion, version } = await getAppVersion(PACKAGE_FILE_PATH);
 
   // build paths
-  const indexPath = `${APP_PATH === "/" ? APP_PATH : APP_PATH + "/" }${APP_ENV}`;
-  const assetPath = `${indexPath}/v/${appVersion}.${APP_BUILD_VERSION}`;
-  const latestPath = `${indexPath}/v/latest`;
+  // APP_PATH: "/" for base-app, non "/" for sub-app
+  const indexPath = `${APP_PATH === "/" ? APP_PATH : APP_PATH + "/"}${APP_ENV}`;
+  // APP_NO_VERSION for non env app deployment
+  const assetPath = APP_NO_VERSION
+    ? ""
+    : `${indexPath}/v/${appVersion}.${APP_BUILD_VERSION}`;
+  const latestPath = assetPath ? `${indexPath}/v/latest` : "";
   const publicPath = `${APP_DOMAIN}${assetPath}`;
 
   // change webpack config: publicPath
