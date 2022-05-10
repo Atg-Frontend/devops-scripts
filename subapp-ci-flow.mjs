@@ -102,7 +102,6 @@ await checkArgv([
   "APP_DOMAIN",
   "APP_PATH",
   "APP_BUILD_VERSION",
-  "APP_ENV",
   "WEBPACK_FILE_PATH",
   "WEBPACK_REPLACE_KEY",
 ]);
