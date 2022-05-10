@@ -32,10 +32,12 @@ const getAppVersion = async (path) => {
 };
 
 const modifyPublicPath = async ({ path, key, val }) => {
+  // ensure end of "/" must contain
+  if (!val.endsWith("/")) val = `${val}/`;
   path = path || "vue.config.js";
   let fileStr = await fs.readFile(path, "utf8");
   // replace key
-  fileStr = fileStr.replace(key, `"${val}/"`);
+  fileStr = fileStr.replace(key, `"${val}"`);
   // save file
   await fs.writeFile(path, fileStr);
 };
@@ -67,10 +69,10 @@ const main = async () => {
   const indexPath = `${APP_PATH === "/" ? APP_PATH : APP_PATH + "/"}${APP_ENV}`;
   // APP_NO_VERSION for non env app deployment
   const assetPath = APP_NO_VERSION
-    ? `${indexPath}`
+    ? ""
     : `${indexPath}/v/${appVersion}.${APP_BUILD_VERSION}`;
-  const latestPath = assetPath ? `${indexPath}/v/latest` : "";
-  const publicPath = `${APP_DOMAIN}${assetPath}`;
+  const latestPath = APP_NO_VERSION ? "" : `${indexPath}/v/latest`;
+  const publicPath = `${APP_DOMAIN}${APP_NO_VERSION ? indexPath : assetPath}`;
 
   // change webpack config: publicPath
   await modifyPublicPath({
