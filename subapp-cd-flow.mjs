@@ -138,7 +138,7 @@ const deploy2AzureBlob = async ({
     await azCopySyncFile2Blob({
       azCopyExecPath,
       azCopyArg: [
-        "--exclude-path=v;temp",
+        "--exclude-path=temp",
         "--delete-destination=true",
         `--recursive=${assetPath ? false : true}`,
       ],
@@ -153,7 +153,7 @@ const deploy2AzureBlob = async ({
     await azCopySyncFile2Blob({
       azCopyExecPath,
       azCopyArg: [
-        "--exclude-path=v;temp",
+        "--exclude-path=temp",
         "--delete-destination=true",
         "--recursive=false",
       ],
