@@ -70,6 +70,7 @@ const azCopySyncFile2Blob = async ({
   destPath,
   uploadPath,
   azCopyArg,
+  toPublicFiles = ["index.html", "app-config.json", "version"],
 }) => {
   const getDestUrl = (filePath) => {
     // remove //
@@ -79,10 +80,22 @@ const azCopySyncFile2Blob = async ({
   await $`${azCopyExecPath} sync ${uploadPath} ${getDestUrl(
     destPath
   )} ${azCopyArg}`;
-  // update index.html file
-  await $`${azCopyExecPath} copy ${uploadPath + "/index.html"} ${getDestUrl(
-    destPath + "/index.html"
-  )} ${["--cache-control=max-age=0, must-revalidate"]}`;
+
+  // update toPublicFiles
+  for (let index = 0; index < toPublicFiles.length; index++) {
+    const pFile = toPublicFiles[index];
+    const filePath = `${uploadPath}/${pFile}`;
+    try {
+      // check file exist or not
+      await fs.readFileSync(filePath);
+      // update file
+      await $`${azCopyExecPath} copy ${`${uploadPath}/${pFile}`} ${getDestUrl(
+        `${destPath}/${pFile}`
+      )} ${["--cache-control=max-age=0, must-revalidate"]}`;
+    } catch (error) {
+      continue;
+    }
+  }
 };
 
 const deploy2AzureBlob = async ({
@@ -96,6 +109,7 @@ const deploy2AzureBlob = async ({
   rootPath,
   isRoot,
   folderPath,
+  toPublicFiles,
 }) => {
   const { azCopyExecPath } = await downloadAzCopy({
     azCopyDownloadLink,
@@ -115,6 +129,7 @@ const deploy2AzureBlob = async ({
       uploadPath: folderPath,
       blobAccountName,
       blobSAS,
+      toPublicFiles,
     });
 
   // update latest folder
@@ -130,6 +145,7 @@ const deploy2AzureBlob = async ({
       uploadPath: folderPath,
       blobAccountName,
       blobSAS,
+      toPublicFiles,
     });
   }
 
@@ -146,6 +162,7 @@ const deploy2AzureBlob = async ({
       uploadPath: folderPath,
       blobAccountName,
       blobSAS,
+      toPublicFiles,
     });
 
   // update root folder
@@ -161,6 +178,7 @@ const deploy2AzureBlob = async ({
       uploadPath: folderPath,
       blobAccountName,
       blobSAS,
+      toPublicFiles,
     });
   }
 };
@@ -180,6 +198,8 @@ const main = async () => {
 
   const APP_IS_ROOT_VERSION =
     process.env.APP_IS_ROOT_VERSION || argv.APP_IS_ROOT_VERSION;
+  const APP_NO_CACHE_FIELS = process.env.APP_NO_CACHE_FIELS ||
+    argv.APP_NO_CACHE_FIELS || ["index.html", "app-config.json", "version"];
 
   const { folderPath } = await getFilesAndPaths(APP_BUILD_FOLDER_PATH);
 
@@ -197,6 +217,7 @@ const main = async () => {
     folderPath,
     blobAccountName: AZ_BLOB_ACC_NAME,
     blobSAS: AZ_BLOB_SAS_TOKEN,
+    toPublicFiles: APP_NO_CACHE_FIELS,
   });
 
   return "ok";
