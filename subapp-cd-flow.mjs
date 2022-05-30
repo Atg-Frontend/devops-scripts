@@ -73,6 +73,7 @@ const azCopySyncFile2Blob = async ({
   toPublicFiles = ["index.html", "app-config.json", "version"],
 }) => {
   const getDestUrl = (filePath) => {
+    if (!filePath) return "";
     // remove //
     filePath = filePath.replace(/\/\//g, "/");
     return `https://${blobAccountName}.blob.core.windows.net/${blobContainerName}${filePath}${blobSAS}`;
