@@ -101,7 +101,6 @@ const main = async () => {
 };
 
 await checkArgv([
-  "APP_DOMAIN",
   "APP_PATH",
   "APP_BUILD_VERSION",
   "WEBPACK_FILE_PATH",
