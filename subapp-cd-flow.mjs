@@ -54,8 +54,8 @@ const downloadAzCopy = async ({ azCopyPath = "temp", azCopyDownloadLink }) => {
     await fs.readFileSync(azCopyExecPath);
   } catch (error) {
     // download and unzip
-    azCopyDownloadLink =
-      azCopyDownloadLink || "https://aka.ms/downloadazcopy-v10-linux";
+    // azCopyDownloadLink = azCopyDownloadLink || "https://aka.ms/downloadazcopy-v10-linux";
+    azCopyDownloadLink = azCopyDownloadLink || "https://azcopyvnext.azureedge.net/release20220511/azcopy_linux_amd64_10.15.0.tar.gz";
     await $`wget -O ${azCopySavePath} ${azCopyDownloadLink} && tar -xf ${azCopySavePath} -C ${azCopyPath} --strip-components=1`;
   } finally {
     return { azCopyExecPath, azCopySavePath };
@@ -73,7 +73,6 @@ const azCopySyncFile2Blob = async ({
   toPublicFiles = ["index.html", "app-config.json", "version"],
 }) => {
   const getDestUrl = (filePath) => {
-    if (!filePath) return "";
     // remove //
     filePath = filePath.replace(/\/\//g, "/");
     return `https://${blobAccountName}.blob.core.windows.net/${blobContainerName}${filePath}${blobSAS}`;
