@@ -51,7 +51,7 @@ const main = async () => {
   const APP_ENV = process.env.APP_ENV || argv.APP_ENV;
   const APP_NO_VERSION = process.env.APP_NO_VERSION || argv.APP_NO_VERSION;
   const APP_PUBLIC_PATH_NO_DOMAIN = process.env.APP_PUBLIC_PATH_NO_DOMAIN || argv.APP_PUBLIC_PATH_NO_DOMAIN;
-  const APP_PUBLIC_END_WITH_CHAR = process.env.APP_PUBLIC_END_WITH_CHAR || argv.APP_PUBLIC_END_WITH_CHAR || '/';
+  const APP_PUBLIC_END_WITH_CHAR = process.env.APP_PUBLIC_END_WITH_CHAR || argv.APP_PUBLIC_END_WITH_CHAR;
 
   const APP_CICD_PATH =
     process.env.APP_CICD_PATH || argv.APP_CICD_PATH || "public/cicd.json";
