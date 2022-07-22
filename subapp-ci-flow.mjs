@@ -31,9 +31,18 @@ const getAppVersion = async (path) => {
   return { appVersion, version };
 };
 
-const modifyPublicPath = async ({ path, key, val }) => {
-  // ensure end of "/" must contain
-  if (!val.endsWith("/")) val = `${val}/`;
+const modifyPublicPath = async ({ path, key, val, APP_PUBLIC_PATH_NO_END_WITH_SLASH }) => {
+
+  // remove slash at the end
+  if (APP_PUBLIC_PATH_NO_END_WITH_SLASH) {
+    val = val.replace(/\/$/, "");
+  } else {
+    // add slash at the end
+    if (!val.endsWith("/")) {
+      val += "/";
+    }
+  }
+
   path = path || "vue.config.js";
   let fileStr = await fs.readFile(path, "utf8");
   // replace key
@@ -51,7 +60,7 @@ const main = async () => {
   const APP_ENV = process.env.APP_ENV || argv.APP_ENV;
   const APP_NO_VERSION = process.env.APP_NO_VERSION || argv.APP_NO_VERSION;
   const APP_PUBLIC_PATH_NO_DOMAIN = process.env.APP_PUBLIC_PATH_NO_DOMAIN || argv.APP_PUBLIC_PATH_NO_DOMAIN;
-  const APP_PUBLIC_PATH_END_WITH_CHAR = process.env.APP_PUBLIC_PATH_END_WITH_CHAR || argv.APP_PUBLIC_PATH_END_WITH_CHAR;
+  const APP_PUBLIC_PATH_NO_END_WITH_SLASH = process.env.APP_PUBLIC_PATH_NO_END_WITH_SLASH || argv.APP_PUBLIC_PATH_NO_END_WITH_SLASH;
 
   const APP_CICD_PATH =
     process.env.APP_CICD_PATH || argv.APP_CICD_PATH || "public/cicd.json";
@@ -68,11 +77,7 @@ const main = async () => {
 
   // build paths
   // APP_PATH: "/" for base-app, non "/" for sub-app
-  const indexPath = `${APP_PATH === "/"
-    ? APP_PATH
-    : APP_PATH.endsWith(APP_PUBLIC_PATH_END_WITH_CHAR)
-      ? APP_PATH
-      : APP_PATH + APP_PUBLIC_PATH_END_WITH_CHAR}${APP_ENV}`;
+  const indexPath = `${APP_PATH === "/" ? APP_PATH : APP_PATH + "/"}${APP_ENV}`;
   // APP_NO_VERSION for non env app deployment
   const assetPath = APP_NO_VERSION
     ? ""
@@ -85,6 +90,7 @@ const main = async () => {
     path: WEBPACK_FILE_PATH,
     key: WEBPACK_REPLACE_KEY,
     val: publicPath,
+    APP_PUBLIC_PATH_NO_END_WITH_SLASH: APP_PUBLIC_PATH_NO_END_WITH_SLASH
   });
 
   const output = {
