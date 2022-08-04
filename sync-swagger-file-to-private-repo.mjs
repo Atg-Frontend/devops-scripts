@@ -36,6 +36,30 @@ const apiCall = async (url, opt) => {
 
 // -- github api
 
+const mergerBranch = async (pat, user, repo, { from, to, message }) => {
+
+  const url = `https://api.github.com/repos/${user}/${repo}/merges`;
+
+  const opt = {
+    method: "POST",
+    headers: {
+      Authorization: `token ${pat}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      "base": `refs/heads/${to}`,
+      "head": `refs/heads/${from}`,
+      "commit_message": message || "auto merge from CICD",
+    }),
+  };
+
+  const data = await apiCall(url, opt);
+  const jsonData = JSON.parse(data);
+
+  return jsonData
+
+}
+
 const getChangedCountByCommitId = async (pat, user, repo, commitId) => {
 
   const url = `https://api.github.com/repos/${user}/${repo}/commits/${commitId}`;
@@ -199,7 +223,7 @@ const createFile = async (
   pat,
   user,
   repo,
-  { branch, path, content, commitMessage } = {}
+  { branch, path, content, commitMessage, baseBranch } = {}
 ) => {
   // read file first to get sha if exist
   const { sha } = await readFile(pat, user, repo, {
@@ -244,7 +268,8 @@ const createFile = async (
     if (fileChangeList.length === 1) {
       const { additions, deletions } = fileChangeList[0]
       if (additions === 1 && deletions === 1) {
-        console.log("[createFile]: ", `${path} new content contains version change only. skip`);
+        console.log("[createFile]: ", `${path} new content contains version change only. process auto merge`);
+        await mergerBranch(pat, user, repo, { from: branch, to: baseBranch });
         return false;
       }
     }
@@ -367,6 +392,7 @@ const main = async () => {
       // create or update file
       const fileRes = await createFile(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
         branch: newBranchName,
+        baseBranch: GITHUB_BRANCH_BASE,
         path: `${project}/${folder}/swagger.json`,
         content: data,
         commitMessage,
