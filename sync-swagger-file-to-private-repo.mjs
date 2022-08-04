@@ -36,6 +36,25 @@ const apiCall = async (url, opt) => {
 
 // -- github api
 
+const getChangedCountByCommitId = async (pat, user, repo, commitId) => {
+
+  const url = `https://api.github.com/repos/${user}/${repo}/commits/${commitId}`;
+
+  const opt = {
+    method: "GET",
+    headers: {
+      Authorization: `token ${pat}`,
+      "Content-Type": "application/json",
+    }
+  };
+
+  const data = await apiCall(url, opt);
+  const jsonData = JSON.parse(data);
+
+  return jsonData.files || []
+
+}
+
 const getPullsByHeadBranchName = async ({
   pat,
   user,
@@ -219,6 +238,17 @@ const createFile = async (
     });
     return false;
   } else {
+    // if sha was diff, check the line change
+    // bypass line change is 2  >>  "version": "1.2.0-5 | 1.2"
+    const fileChangeList = await getChangedCountByCommitId(pat, user, repo, jsonData?.commit?.sha);
+    if (fileChangeList.length === 1) {
+      const { additions, deletions } = fileChangeList[0]
+      if (additions === 1 && deletions === 1) {
+        console.log("[createFile]: ", `${path} new content contains version change only. skip`);
+        return false;
+      }
+    }
+
     return true;
   }
 };
@@ -342,7 +372,7 @@ const main = async () => {
         commitMessage,
       });
 
-      // remove branch if file create file or content keep same
+      // remove branch if file created or content keep same
       if (!fileRes) {
         // check current branch was pull request before
         const prList = await getPullsByHeadBranchName({
