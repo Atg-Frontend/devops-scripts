@@ -156,7 +156,7 @@ const deploy2AzureBlob = async ({
       azCopyArg: [
         "--exclude-path=temp",
         "--delete-destination=true",
-        `--recursive=${assetPath ? false : true}`,
+        `--recursive=${assetPath || indexPath === rootPath ? false : true}`,
       ],
       destPath: indexPath,
       uploadPath: folderPath,
