@@ -264,6 +264,8 @@ const createFile = async (
   } else {
     // if sha was diff, check the line change
     // bypass line change is 2  >>  "version": "1.2.0-5 | 1.2"
+    if (!jsonData?.commit?.sha) return true
+
     const fileChangeList = await getChangedCountByCommitId(pat, user, repo, jsonData?.commit?.sha);
     if (fileChangeList.length === 1) {
       const { additions, deletions } = fileChangeList[0]
