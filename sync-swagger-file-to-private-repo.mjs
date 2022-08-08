@@ -390,7 +390,7 @@ const main = async () => {
         baseBranch: GITHUB_BRANCH_BASE,
       });
 
-      const commitKey = `${project}/${folder} `;
+      const commitKey = `${project}/${folder}`;
       const commitMessage = `build: bump ${commitKey} to ${version}`;
 
       // create or update file
