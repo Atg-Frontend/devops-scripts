@@ -384,20 +384,20 @@ const main = async () => {
       version = version.split(" ")[0].trim();
 
       // create branch
-      const newBranchName = `${GITHUB_BRANCH} / ${project} / ${folder} / ${version}`;
+      const newBranchName = `${GITHUB_BRANCH}/${project}/${folder}/${version}`;
       await createBranch(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
         branch: newBranchName,
         baseBranch: GITHUB_BRANCH_BASE,
       });
 
-      const commitKey = `${project} / ${folder} `;
+      const commitKey = `${project}/${folder} `;
       const commitMessage = `build: bump ${commitKey} to ${version}`;
 
       // create or update file
       const fileRes = await createFile(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
         branch: newBranchName,
         baseBranch: GITHUB_BRANCH_BASE,
-        path: `${project} / ${folder} / swagger.json`,
+        path: `${project}/${folder}/swagger.json`,
         content: data,
         commitMessage,
       });
