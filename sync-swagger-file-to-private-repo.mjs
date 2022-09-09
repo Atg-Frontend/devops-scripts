@@ -288,7 +288,7 @@ const getSwagger = async ({ url, file }) => {
     if (!data) return [{}];
 
     const projectName = /atg-(.*?)-dev/g.exec(url)[1];
-    const folderName = /swagger\/(.*?)\/swagger/g.exec(url)[1];
+    const folderName = /swagger\/(.*?)\/swagger/g.exec(url)?.[1] || 'admin1.0';
     return [
       {
         project: projectName.toLowerCase(),
