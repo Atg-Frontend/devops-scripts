@@ -110,6 +110,7 @@ const deploy2AzureBlob = async ({
   isRoot,
   folderPath,
   toPublicFiles,
+  blobContainerName
 }) => {
   const { azCopyExecPath } = await downloadAzCopy({
     azCopyDownloadLink,
@@ -130,6 +131,7 @@ const deploy2AzureBlob = async ({
       blobAccountName,
       blobSAS,
       toPublicFiles,
+      blobContainerName
     });
 
   // update latest folder
@@ -146,6 +148,7 @@ const deploy2AzureBlob = async ({
       blobAccountName,
       blobSAS,
       toPublicFiles,
+      blobContainerName
     });
   }
 
@@ -163,6 +166,7 @@ const deploy2AzureBlob = async ({
       blobAccountName,
       blobSAS,
       toPublicFiles,
+      blobContainerName
     });
 
   // update root folder
@@ -179,6 +183,7 @@ const deploy2AzureBlob = async ({
       blobAccountName,
       blobSAS,
       toPublicFiles,
+      blobContainerName
     });
   }
 };
@@ -195,6 +200,8 @@ const main = async () => {
     process.env.AZ_BLOB_ACC_NAME || argv.AZ_BLOB_ACC_NAME;
   const AZ_BLOB_SAS_TOKEN =
     process.env.AZ_BLOB_SAS_TOKEN || argv.AZ_BLOB_SAS_TOKEN;
+  const AZ_BLOB_BLOB_CONTAINER_NAME =
+    process.env.AZ_BLOB_BLOB_CONTAINER_NAME || argv.AZ_BLOB_BLOB_CONTAINER_NAME || '%24web';
 
   const APP_IS_ROOT_VERSION =
     process.env.APP_IS_ROOT_VERSION || argv.APP_IS_ROOT_VERSION;
@@ -218,6 +225,7 @@ const main = async () => {
     blobAccountName: AZ_BLOB_ACC_NAME,
     blobSAS: AZ_BLOB_SAS_TOKEN,
     toPublicFiles: APP_NO_CACHE_FIELS,
+    blobContainerName: AZ_BLOB_BLOB_CONTAINER_NAME
   });
 
   return "ok";
