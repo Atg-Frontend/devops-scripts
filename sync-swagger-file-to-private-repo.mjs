@@ -37,7 +37,6 @@ const apiCall = async (url, opt) => {
 // -- github api
 
 const mergerBranch = async (pat, user, repo, { from, to, message }) => {
-
   const url = `https://api.github.com/repos/${user}/${repo}/merges`;
 
   const opt = {
@@ -47,21 +46,19 @@ const mergerBranch = async (pat, user, repo, { from, to, message }) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      "base": `refs/heads/${to}`,
-      "head": `refs/heads/${from}`,
-      "commit_message": message || "auto merge from CICD",
+      base: `refs/heads/${to}`,
+      head: `refs/heads/${from}`,
+      commit_message: message || "auto merge from CICD",
     }),
   };
 
   const data = await apiCall(url, opt);
   const jsonData = JSON.parse(data);
 
-  return jsonData
-
-}
+  return jsonData;
+};
 
 const getChangedCountByCommitId = async (pat, user, repo, commitId) => {
-
   const url = `https://api.github.com/repos/${user}/${repo}/commits/${commitId}`;
 
   const opt = {
@@ -69,15 +66,14 @@ const getChangedCountByCommitId = async (pat, user, repo, commitId) => {
     headers: {
       Authorization: `token ${pat}`,
       "Content-Type": "application/json",
-    }
+    },
   };
 
   const data = await apiCall(url, opt);
   const jsonData = JSON.parse(data);
 
-  return jsonData.files || []
-
-}
+  return jsonData.files || [];
+};
 
 const getPullsByHeadBranchName = async ({
   pat,
@@ -264,15 +260,25 @@ const createFile = async (
   } else {
     // if sha was diff, check the line change
     // bypass line change is 2  >>  "version": "1.2.0-5 | 1.2"
-    if (!jsonData?.commit?.sha) return true
+    if (!jsonData?.commit?.sha) return true;
 
-    const fileChangeList = await getChangedCountByCommitId(pat, user, repo, jsonData?.commit?.sha);
+    const fileChangeList = await getChangedCountByCommitId(
+      pat,
+      user,
+      repo,
+      jsonData?.commit?.sha
+    );
     if (fileChangeList.length === 1) {
-      const { additions, deletions } = fileChangeList[0]
+      const { additions, deletions } = fileChangeList[0];
       if (additions === 1 && deletions === 1) {
-        console.log("[createFile]: ", `${path} new content contains version change only. process auto merge`);
+        console.log(
+          "[createFile]: ",
+          `${path} new content contains version change only. process auto merge`
+        );
         await mergerBranch(pat, user, repo, {
-          from: branch, to: baseBranch, message: `auto merge ${commitMessage}`
+          from: branch,
+          to: baseBranch,
+          message: `auto merge ${commitMessage}`,
         });
         return false;
       }
@@ -284,11 +290,19 @@ const createFile = async (
 
 const getSwagger = async ({ url, file }) => {
   if (url) {
-    const data = await getFileContent({ FILE_URL: url });
+    if (typeof url === "string") {
+      url = {
+        url,
+        keyRegEx: "atg-(.*?)-dev",
+        verRegEx: "swagger/(.*?)/swagger",
+      };
+    }
+
+    const data = await getFileContent({ FILE_URL: url.url });
     if (!data) return [{}];
 
-    const projectName = /atg-(.*?)-dev/g.exec(url)[1];
-    const folderName = /swagger\/(.*?)\/swagger/g.exec(url)?.[1] || 'admin1.0';
+    const projectName = new RegExp(url.keyRegEx).exec(url)[1];
+    const folderName = new RegExp(url.verRegEx).exec(url)?.[1] || "admin0.0";
     return [
       {
         project: projectName.toLowerCase(),
