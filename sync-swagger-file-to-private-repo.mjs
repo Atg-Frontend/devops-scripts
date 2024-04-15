@@ -301,13 +301,15 @@ const getSwagger = async ({ url, file }) => {
     const data = await getFileContent({ FILE_URL: url.url });
     if (!data) return [{}];
 
-    const projectName = new RegExp(url.keyRegEx).exec(url)[1];
-    const folderName = new RegExp(url.verRegEx).exec(url)?.[1] || "admin0.0";
+    const projectName =
+      new RegExp(url.keyRegEx).exec(url.url)?.[1] || "notfound";
+    const folderName = new RegExp(url.verRegEx).exec(url.url)?.[1] || "0.0";
     return [
       {
         project: projectName.toLowerCase(),
         folder: folderName.toLowerCase(),
         data,
+        url: url.url,
       },
     ];
   } else if (file) {
@@ -378,6 +380,8 @@ const main = async () => {
     throw new Error("SWAGGER_URL or SWAGGER_FILE is required");
   }
 
+  const serverIP = (await $`curl ifconfig.io`).stdout.trim()
+
   const listRes = await getSwagger({
     url: SWAGGER_URL,
     file: SWAGGER_FILE,
@@ -386,12 +390,26 @@ const main = async () => {
   // create a file for each project
   await Promise.all(
     listRes.map(async (item) => {
-      const { data, project, folder } = item;
+      const { data, project, folder, url } = item;
       if (!data) return;
+
+      let parseData = {};
+      try {
+        parseData = JSON.parse(data);
+      } catch (error) {
+        console.error("[parseData]: ", {
+          serverIP,
+          url,
+          project,
+          folder,
+          error,
+          data,
+        });
+      }
 
       let {
         info: { version },
-      } = JSON.parse(data);
+      } = parseData;
 
       if (!version) return;
       // trim version, e.g  "1.0.0-16 | 1.0"
