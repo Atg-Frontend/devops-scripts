@@ -55,7 +55,9 @@ const downloadAzCopy = async ({ azCopyPath = "temp", azCopyDownloadLink }) => {
   } catch (error) {
     // download and unzip
     // azCopyDownloadLink = azCopyDownloadLink || "https://aka.ms/downloadazcopy-v10-linux";
-    azCopyDownloadLink = azCopyDownloadLink || "https://azcopyvnext.azureedge.net/release20220511/azcopy_linux_amd64_10.15.0.tar.gz";
+    azCopyDownloadLink =
+      azCopyDownloadLink ||
+      "https://azcopyvnext.azureedge.net/release20220511/azcopy_linux_amd64_10.15.0.tar.gz";
     await $`wget -O ${azCopySavePath} ${azCopyDownloadLink} && tar -xf ${azCopySavePath} -C ${azCopyPath} --strip-components=1`;
   } finally {
     return { azCopyExecPath, azCopySavePath };
@@ -110,7 +112,8 @@ const deploy2AzureBlob = async ({
   isRoot,
   folderPath,
   toPublicFiles,
-  blobContainerName
+  blobContainerName,
+  excludePath
 }) => {
   const { azCopyExecPath } = await downloadAzCopy({
     azCopyDownloadLink,
@@ -122,7 +125,7 @@ const deploy2AzureBlob = async ({
     await azCopySyncFile2Blob({
       azCopyExecPath,
       azCopyArg: [
-        "--exclude-path=temp;apps",
+        `--exclude-path=${excludePath}`,
         "--recursive",
         "--delete-destination=true",
       ],
@@ -131,7 +134,7 @@ const deploy2AzureBlob = async ({
       blobAccountName,
       blobSAS,
       toPublicFiles,
-      blobContainerName
+      blobContainerName,
     });
 
   // update latest folder
@@ -139,7 +142,7 @@ const deploy2AzureBlob = async ({
     await azCopySyncFile2Blob({
       azCopyExecPath,
       azCopyArg: [
-        "--exclude-path=temp;apps",
+        `--exclude-path=${excludePath}`,
         "--recursive",
         "--delete-destination=true",
       ],
@@ -148,7 +151,7 @@ const deploy2AzureBlob = async ({
       blobAccountName,
       blobSAS,
       toPublicFiles,
-      blobContainerName
+      blobContainerName,
     });
   }
 
@@ -157,16 +160,16 @@ const deploy2AzureBlob = async ({
     await azCopySyncFile2Blob({
       azCopyExecPath,
       azCopyArg: [
-        "--exclude-path=temp;apps;manifest.json;config",
+        `--exclude-path=${excludePath}`,
         "--delete-destination=true",
-        `--recursive=${assetPath || indexPath === rootPath ? false : true}`,
+        `--recursive=${true}`,
       ],
       destPath: indexPath,
       uploadPath: folderPath,
       blobAccountName,
       blobSAS,
       toPublicFiles,
-      blobContainerName
+      blobContainerName,
     });
 
   // update root folder
@@ -174,7 +177,7 @@ const deploy2AzureBlob = async ({
     await azCopySyncFile2Blob({
       azCopyExecPath,
       azCopyArg: [
-        "--exclude-path=temp;apps;manifest.json;config",
+        `--exclude-path=${excludePath}`,
         "--delete-destination=true",
         "--recursive=false",
       ],
@@ -183,7 +186,7 @@ const deploy2AzureBlob = async ({
       blobAccountName,
       blobSAS,
       toPublicFiles,
-      blobContainerName
+      blobContainerName,
     });
   }
 };
@@ -201,12 +204,16 @@ const main = async () => {
   const AZ_BLOB_SAS_TOKEN =
     process.env.AZ_BLOB_SAS_TOKEN || argv.AZ_BLOB_SAS_TOKEN;
   const AZ_BLOB_BLOB_CONTAINER_NAME =
-    process.env.AZ_BLOB_BLOB_CONTAINER_NAME || argv.AZ_BLOB_BLOB_CONTAINER_NAME || '%24web';
+    process.env.AZ_BLOB_BLOB_CONTAINER_NAME ||
+    argv.AZ_BLOB_BLOB_CONTAINER_NAME ||
+    "%24web";
 
   const APP_IS_ROOT_VERSION =
     process.env.APP_IS_ROOT_VERSION || argv.APP_IS_ROOT_VERSION;
   const APP_NO_CACHE_FIELS = process.env.APP_NO_CACHE_FIELS ||
     argv.APP_NO_CACHE_FIELS || ["index.html", "app-config.json", "version"];
+
+  const EXCLUDE_PATH = process.env.EXCLUDE_PATH || argv.EXCLUDE_PATH || "temp;apps;manifest.json;config,storage,tenants";
 
   const { folderPath } = await getFilesAndPaths(APP_BUILD_FOLDER_PATH);
 
@@ -225,7 +232,8 @@ const main = async () => {
     blobAccountName: AZ_BLOB_ACC_NAME,
     blobSAS: AZ_BLOB_SAS_TOKEN,
     toPublicFiles: APP_NO_CACHE_FIELS,
-    blobContainerName: AZ_BLOB_BLOB_CONTAINER_NAME
+    blobContainerName: AZ_BLOB_BLOB_CONTAINER_NAME,
+    excludePath: EXCLUDE_PATH,
   });
 
   return "ok";
