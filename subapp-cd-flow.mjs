@@ -113,7 +113,7 @@ const deploy2AzureBlob = async ({
   folderPath,
   toPublicFiles,
   blobContainerName,
-  excludePath
+  excludePath,
 }) => {
   const { azCopyExecPath } = await downloadAzCopy({
     azCopyDownloadLink,
@@ -162,7 +162,7 @@ const deploy2AzureBlob = async ({
       azCopyArg: [
         `--exclude-path=${excludePath}`,
         "--delete-destination=true",
-        `--recursive=${true}`,
+        `--recursive=${assetPath || indexPath === rootPath ? false : true}`,
       ],
       destPath: indexPath,
       uploadPath: folderPath,
@@ -213,7 +213,10 @@ const main = async () => {
   const APP_NO_CACHE_FIELS = process.env.APP_NO_CACHE_FIELS ||
     argv.APP_NO_CACHE_FIELS || ["index.html", "app-config.json", "version"];
 
-  const EXCLUDE_PATH = process.env.EXCLUDE_PATH || argv.EXCLUDE_PATH || "temp;apps;manifest.json;config,storage,tenants";
+  const EXCLUDE_PATH =
+    process.env.EXCLUDE_PATH ||
+    argv.EXCLUDE_PATH ||
+    "temp;apps;manifest.json;config,storage,tenants";
 
   const { folderPath } = await getFilesAndPaths(APP_BUILD_FOLDER_PATH);
 
