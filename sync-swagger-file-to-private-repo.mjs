@@ -319,8 +319,8 @@ const getSwagger = async ({ url, file }) => {
     const { atgList } = JSON.parse(res);
     const output = await Promise.all(
       atgList
-        .map((itemUrl) => {
-          return getSwagger({ url: itemUrl });
+        .map((item) => {
+          return getSwagger({ url: item.url });
         })
         .flat()
     );
@@ -380,7 +380,7 @@ const main = async () => {
     throw new Error("SWAGGER_URL or SWAGGER_FILE is required");
   }
 
-  const serverIP = (await $`curl ifconfig.io`).stdout.trim()
+  const serverIP = (await $`curl ifconfig.io`).stdout.trim();
 
   const listRes = await getSwagger({
     url: SWAGGER_URL,
