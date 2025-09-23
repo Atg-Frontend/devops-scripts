@@ -20,7 +20,15 @@ const getFileContent = async ({ FILE_PATH, FILE_URL }) => {
     return await fs.readFile(FILE_PATH, "utf8");
   } else if (FILE_URL) {
     const res = await fetch(FILE_URL);
-    return res.status === 200 ? res.text() : false;
+    if (res.status === 200) {
+      return res.text();
+    } else {
+      console.error("[getFileContent]: ", `fetch ${FILE_URL} error`, {
+        status: res.status,
+        statusText: res.statusText,
+      });
+      return false;
+    }
   } else {
     throw new Error("FILE_PATH or FILE_URL is not set.");
   }
@@ -288,18 +296,29 @@ const createFile = async (
   }
 };
 
-const getSwagger = async ({ url, file }) => {
+const getSwagger = async ({ url, file, urlOpt = {} }) => {
   if (url) {
     if (typeof url === "string") {
       url = {
         url,
         keyRegEx: "atg-(.*?)-dev",
         verRegEx: "swagger/(.*?)/swagger",
+        ...urlOpt,
       };
     }
 
-    const data = await getFileContent({ FILE_URL: url.url });
-    if (!data) return [{}];
+    let data;
+    try {
+      data = await getFileContent({ FILE_URL: url.url });
+    } catch (error) {
+      console.error("[getSwagger]: ", `fetch ${url.url} error`, { error });
+    }
+    if (!data) {
+      console.error("[getSwagger]: ", `fetch ${url.url} no data`);
+      return [{}];
+    } else {
+      console.log("[getSwagger]: ", `fetch ${url.url} success`);
+    }
 
     const projectName =
       new RegExp(url.keyRegEx).exec(url.url)?.[1] || "notfound";
@@ -320,7 +339,13 @@ const getSwagger = async ({ url, file }) => {
     const output = await Promise.all(
       atgList
         .map((item) => {
-          return getSwagger({ url: item.url });
+          return getSwagger({
+            url: item.url,
+            urlOpt: {
+              keyRegEx: item.keyRegEx,
+              verRegEx: item.verRegEx,
+            },
+          });
         })
         .flat()
     );
@@ -386,6 +411,12 @@ const main = async () => {
     url: SWAGGER_URL,
     file: SWAGGER_FILE,
   });
+
+  const logRes = listRes.map((item) => {
+    const { project, folder, url } = item;
+    return { project, folder, url };
+  });
+  console.log("[getSwagger]: ", { serverIP, listRes: logRes });
 
   // create a file for each project
   await Promise.all(
