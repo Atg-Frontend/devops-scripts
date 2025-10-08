@@ -424,6 +424,9 @@ const main = async () => {
       const { data, project, folder, url } = item;
       if (!data) return;
 
+      // if data is not json, skip it
+      if (typeof data !== "string") return;
+
       let parseData = {};
       try {
         parseData = JSON.parse(data);
@@ -436,6 +439,20 @@ const main = async () => {
           error,
           data,
         });
+        return undefined;
+      }
+
+      // if no version, skip it
+      if (!parseData.info || !parseData.info.version) {
+        console.error("[parseData]: ", {
+          serverIP,
+          url,
+          project,
+          folder,
+          error: "no version",
+          data,
+        });
+        return undefined;
       }
 
       let {
