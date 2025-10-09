@@ -315,12 +315,14 @@ const getSwagger = async ({ url, file, urlOpt = {} }) => {
     let folderName;
 
     if (hasModuleFlow) {
+      console.log("[getSwagger]: ", `using module flow`);
       // New flow: build URL with module and definition query parameters
       const baseUrl = url.baseUrl;
       finalUrl = `${baseUrl}?module=${url.module}&definition=${url.definition}`;
       projectName = url.projectName;
       folderName = url.folderName;
     } else {
+      console.log("[getSwagger]: ", `using keyRegEx flow`, urlOpt);
       // Original flow: extract from URL using regex
       projectName =
         new RegExp(url.keyRegEx).exec(url.url)?.[1] || "notfound";
