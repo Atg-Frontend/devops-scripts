@@ -307,28 +307,45 @@ const getSwagger = async ({ url, file, urlOpt = {} }) => {
       };
     }
 
-    let data;
-    try {
-      data = await getFileContent({ FILE_URL: url.url });
-    } catch (error) {
-      console.error("[getSwagger]: ", `fetch ${url.url} error`, { error });
-    }
-    if (!data) {
-      console.error("[getSwagger]: ", `fetch ${url.url} no data`);
-      return [{}];
+    // Check if urlOpt contains module, definition, projectName, and folderName
+    const hasModuleFlow = url.baseUrl && url.module && url.definition && url.projectName && url.folderName;
+
+    let finalUrl = url.url;
+    let projectName;
+    let folderName;
+
+    if (hasModuleFlow) {
+      // New flow: build URL with module and definition query parameters
+      const baseUrl = url.baseUrl;
+      finalUrl = `${baseUrl}?module=${url.module}&definition=${url.definition}`;
+      projectName = url.projectName;
+      folderName = url.folderName;
     } else {
-      console.log("[getSwagger]: ", `fetch ${url.url} success`);
+      // Original flow: extract from URL using regex
+      projectName =
+        new RegExp(url.keyRegEx).exec(url.url)?.[1] || "notfound";
+      folderName = new RegExp(url.verRegEx).exec(url.url)?.[1] || "0.0";
     }
 
-    const projectName =
-      new RegExp(url.keyRegEx).exec(url.url)?.[1] || "notfound";
-    const folderName = new RegExp(url.verRegEx).exec(url.url)?.[1] || "0.0";
+    let data;
+    try {
+      data = await getFileContent({ FILE_URL: finalUrl });
+    } catch (error) {
+      console.error("[getSwagger]: ", `fetch ${finalUrl} error`, { error });
+    }
+    if (!data) {
+      console.error("[getSwagger]: ", `fetch ${finalUrl} no data`);
+      return [{}];
+    } else {
+      console.log("[getSwagger]: ", `fetch ${finalUrl} success`);
+    }
+
     return [
       {
         project: projectName.toLowerCase(),
         folder: folderName.toLowerCase(),
         data,
-        url: url.url,
+        url: finalUrl,
       },
     ];
   } else if (file) {
@@ -344,6 +361,11 @@ const getSwagger = async ({ url, file, urlOpt = {} }) => {
             urlOpt: {
               keyRegEx: item.keyRegEx,
               verRegEx: item.verRegEx,
+              module: item.module,
+              definition: item.definition,
+              projectName: item.projectName,
+              folderName: item.folderName,
+              baseUrl: item.baseUrl,
             },
           });
         })
