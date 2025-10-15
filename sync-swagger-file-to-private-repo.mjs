@@ -33,25 +33,25 @@ class Logger {
       parts.push(JSON.stringify(meta, null, 2));
     }
 
-    return parts.join(' ');
+    return parts.join(" ");
   }
 
   debug(tag, message, meta) {
-    if (process.env.DEBUG || process.env.LOG_LEVEL === 'debug') {
-      console.log(this._formatMessage('debug', tag, message, meta));
+    if (process.env.DEBUG || process.env.LOG_LEVEL === "debug") {
+      console.log(this._formatMessage("debug", tag, message, meta));
     }
   }
 
   info(tag, message, meta) {
-    console.log(this._formatMessage('info', tag, message, meta));
+    console.log(this._formatMessage("info", tag, message, meta));
   }
 
   warn(tag, message, meta) {
-    console.warn(this._formatMessage('warn', tag, message, meta));
+    console.warn(this._formatMessage("warn", tag, message, meta));
   }
 
   error(tag, message, meta) {
-    console.error(this._formatMessage('error', tag, message, meta));
+    console.error(this._formatMessage("error", tag, message, meta));
   }
 
   withContext(context) {
@@ -64,7 +64,7 @@ class Logger {
 }
 
 const logger = new Logger({
-  enableStructured: process.env.LOG_FORMAT === 'json',
+  enableStructured: process.env.LOG_FORMAT === "json",
 });
 
 // -- base helper
@@ -87,7 +87,7 @@ const getFileContent = async ({
   FILE_URL,
   opt = { reponseType: "text" },
 }) => {
-  const tag = 'getFileContent';
+  const tag = "getFileContent";
 
   if (FILE_PATH) {
     try {
@@ -148,8 +148,8 @@ const getFileContent = async ({
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const apiCall = async (url, opt, retries = 3) => {
-  const method = opt?.method || 'GET';
-  const tag = 'apiCall';
+  const method = opt?.method || "GET";
+  const tag = "apiCall";
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -170,7 +170,9 @@ const apiCall = async (url, opt, retries = 3) => {
       // Check for HTTP errors
       if (!response.ok) {
         const errorBody = await response.text();
-        const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const error = new Error(
+          `HTTP ${response.status}: ${response.statusText}`
+        );
         error.status = response.status;
         error.statusText = response.statusText;
         error.body = errorBody;
@@ -351,7 +353,7 @@ const requestReviewer2Pull = async (
 };
 
 const removeBranch = async (pat, user, repo, { branch }) => {
-  const tag = 'removeBranch';
+  const tag = "removeBranch";
   const url = `https://api.github.com/repos/${user}/${repo}/git/refs/heads/${branch}`;
   const opt = {
     method: "DELETE",
@@ -376,7 +378,7 @@ const getBranch = async (pat, user, repo, branch) => {
 };
 
 const createBranch = async (pat, user, repo, { branch, baseBranch }) => {
-  const tag = 'createBranch';
+  const tag = "createBranch";
 
   try {
     // get base branch sha
@@ -385,7 +387,10 @@ const createBranch = async (pat, user, repo, { branch, baseBranch }) => {
       object: { sha: shaMain },
     } = await getBranch(pat, user, repo, baseBranch);
 
-    logger.debug(tag, `Base branch SHA retrieved`, { baseBranch, sha: shaMain });
+    logger.debug(tag, `Base branch SHA retrieved`, {
+      baseBranch,
+      sha: shaMain,
+    });
 
     const url = `https://api.github.com/repos/${user}/${repo}/git/refs`;
     const opt = {
@@ -438,10 +443,19 @@ const createFile = async (
   { branch, path, content, commitMessage, baseBranch } = {}
 ) => {
   // read file first to get sha if exist
-  const { sha } = await readFile(pat, user, repo, {
-    branch,
-    path,
-  });
+  let sha = undefined;
+  try {
+    const readFileData = await readFile(pat, user, repo, {
+      branch,
+      path,
+    });
+    sha = readFileData.sha;
+  } catch (error) {
+    logger.error(tag, `Failed to read file but continue`, {
+      path,
+      error: error.message,
+    });
+  }
 
   const message = commitMessage;
 
@@ -468,7 +482,7 @@ const createFile = async (
 
   // compare sha & new sha
   if (sha && newSha && sha === newSha) {
-    logger.info('createFile', `File content unchanged, skipping`, {
+    logger.info("createFile", `File content unchanged, skipping`, {
       path,
       sha,
       repo,
@@ -488,13 +502,17 @@ const createFile = async (
     if (fileChangeList.length === 1) {
       const { additions, deletions } = fileChangeList[0];
       if (additions === 1 && deletions === 1) {
-        logger.info('createFile', `Version-only change detected, auto-merging`, {
-          path,
-          additions,
-          deletions,
-          branch,
-          baseBranch,
-        });
+        logger.info(
+          "createFile",
+          `Version-only change detected, auto-merging`,
+          {
+            path,
+            additions,
+            deletions,
+            branch,
+            baseBranch,
+          }
+        );
         await mergerBranch(pat, user, repo, {
           from: branch,
           to: baseBranch,
@@ -509,7 +527,7 @@ const createFile = async (
 };
 
 const getSwagger = async ({ url, file, urlOpt = {} }) => {
-  const tag = 'getSwagger';
+  const tag = "getSwagger";
 
   if (url) {
     if (typeof url === "string") {
@@ -565,7 +583,7 @@ const getSwagger = async ({ url, file, urlOpt = {} }) => {
     try {
       logger.debug(tag, `Fetching swagger data`, { finalUrl });
       data = await getFileContent({
-        FILE_URL: finalUrl
+        FILE_URL: finalUrl,
       });
     } catch (error) {
       logger.error(tag, `Failed to fetch swagger data`, {
@@ -624,7 +642,9 @@ const getSwagger = async ({ url, file, urlOpt = {} }) => {
         return [{}];
       }
 
-      logger.info(tag, `Loaded ${atgList.length} items from swagger list`, { file });
+      logger.info(tag, `Loaded ${atgList.length} items from swagger list`, {
+        file,
+      });
     } catch (error) {
       logger.error(tag, `Failed to parse swagger list JSON`, {
         file,
@@ -668,7 +688,7 @@ const getSwagger = async ({ url, file, urlOpt = {} }) => {
 };
 
 const evtCloseOpeningPR = async ({ pat, user, repo, commitKey }) => {
-  const tag = 'evtCloseOpeningPR';
+  const tag = "evtCloseOpeningPR";
 
   // check if there was older version is PR-ing and close it if yes
   logger.debug(tag, `Checking for existing PRs`, { commitKey, repo });
@@ -714,7 +734,7 @@ const evtCloseOpeningPR = async ({ pat, user, repo, commitKey }) => {
 
 // -- main
 const main = async () => {
-  const tag = 'main';
+  const tag = "main";
   const startTime = Date.now();
 
   logger.info(tag, `Starting swagger sync process`);
@@ -734,12 +754,14 @@ const main = async () => {
 
   // Validate required environment variables
   const missingVars = [];
-  if (!GITHUB_PAT) missingVars.push('GITHUB_PAT');
-  if (!GITHUB_USER) missingVars.push('GITHUB_USER');
-  if (!GITHUB_REPO) missingVars.push('GITHUB_REPO');
+  if (!GITHUB_PAT) missingVars.push("GITHUB_PAT");
+  if (!GITHUB_USER) missingVars.push("GITHUB_USER");
+  if (!GITHUB_REPO) missingVars.push("GITHUB_REPO");
 
   if (missingVars.length > 0) {
-    const error = new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+    const error = new Error(
+      `Missing required environment variables: ${missingVars.join(", ")}`
+    );
     logger.error(tag, error.message, { missingVars });
     throw error;
   }
@@ -756,12 +778,12 @@ const main = async () => {
     GITHUB_REPO,
     GITHUB_BRANCH,
     GITHUB_BRANCH_BASE,
-    GITHUB_REVIEWERS: GITHUB_REVIEWERS ? 'set' : 'not set',
-    SWAGGER_URL: SWAGGER_URL ? 'set' : 'not set',
-    SWAGGER_FILE: SWAGGER_FILE || 'not set',
+    GITHUB_REVIEWERS: GITHUB_REVIEWERS ? "set" : "not set",
+    SWAGGER_URL: SWAGGER_URL ? "set" : "not set",
+    SWAGGER_FILE: SWAGGER_FILE || "not set",
   });
 
-  let serverIP = 'unknown';
+  let serverIP = "unknown";
   try {
     serverIP = (await $`curl -s ifconfig.io`).stdout.trim();
     logger.debug(tag, `Server IP retrieved`, { serverIP });
@@ -793,25 +815,36 @@ const main = async () => {
 
   const results = await Promise.allSettled(
     listRes.map(async (item, index) => {
-      const itemTag = 'processItem';
+      const itemTag = "processItem";
       const itemLogger = logger.withContext({ itemIndex: index });
 
       try {
         const { data, project, folder, url } = item;
 
-        itemLogger.debug(itemTag, `Starting processing`, { project, folder, url });
+        itemLogger.debug(itemTag, `Starting processing`, {
+          project,
+          folder,
+          url,
+        });
 
         // Validate data exists and is a string
         if (!data || typeof data !== "string") {
-          itemLogger.warn(itemTag, `Skipping invalid data`, { project, folder, url });
-          return { status: 'skipped', reason: 'invalid_data', project, folder };
+          itemLogger.warn(itemTag, `Skipping invalid data`, {
+            project,
+            folder,
+            url,
+          });
+          return { status: "skipped", reason: "invalid_data", project, folder };
         }
 
         // Parse JSON data
         let parseData = {};
         try {
           parseData = JSON.parse(data);
-          itemLogger.debug(itemTag, `JSON parsed successfully`, { project, folder });
+          itemLogger.debug(itemTag, `JSON parsed successfully`, {
+            project,
+            folder,
+          });
         } catch (error) {
           itemLogger.error(itemTag, `Failed to parse JSON`, {
             serverIP,
@@ -820,7 +853,13 @@ const main = async () => {
             folder,
             error: error.message,
           });
-          return { status: 'failed', reason: 'json_parse_error', project, folder, error: error.message };
+          return {
+            status: "failed",
+            reason: "json_parse_error",
+            project,
+            folder,
+            error: error.message,
+          };
         }
 
         // Validate version exists
@@ -832,7 +871,7 @@ const main = async () => {
             folder,
             hasInfo: !!parseData.info,
           });
-          return { status: 'failed', reason: 'no_version', project, folder };
+          return { status: "failed", reason: "no_version", project, folder };
         }
 
         let {
@@ -841,13 +880,17 @@ const main = async () => {
 
         if (!version) {
           itemLogger.warn(itemTag, `Empty version field`, { project, folder });
-          return { status: 'failed', reason: 'empty_version', project, folder };
+          return { status: "failed", reason: "empty_version", project, folder };
         }
-        
+
         // trim version, e.g  "1.0.0-16 | 1.0"
         version = version.split(" ")[0].trim();
 
-        itemLogger.info(itemTag, `Processing version`, { project, folder, version });
+        itemLogger.info(itemTag, `Processing version`, {
+          project,
+          folder,
+          version,
+        });
 
         // create branch
         const newBranchName = `${GITHUB_BRANCH}/${project}/${folder}/${version}`;
@@ -888,12 +931,20 @@ const main = async () => {
             path: `${project}/${folder}/swagger.json`,
             error: error.message,
           });
-          return { status: 'failed', reason: 'file_creation_error', project, folder, error: error.message };
+          return {
+            status: "failed",
+            reason: "file_creation_error",
+            project,
+            folder,
+            error: error.message,
+          };
         }
 
         // remove branch if file created or content keep same
         if (!fileRes) {
-          itemLogger.debug(itemTag, `No file changes detected`, { newBranchName });
+          itemLogger.debug(itemTag, `No file changes detected`, {
+            newBranchName,
+          });
 
           // check current branch was pull request before
           const prList = await getPullsByHeadBranchName({
@@ -912,20 +963,36 @@ const main = async () => {
               version,
               prCount: prList.length,
             });
-            return { status: 'skipped', reason: 'pr_exists', project, folder, version };
+            return {
+              status: "skipped",
+              reason: "pr_exists",
+              project,
+              folder,
+              version,
+            };
           }
 
           // remove branch if no PR before
-          itemLogger.debug(itemTag, `Removing branch (no changes)`, { newBranchName });
+          itemLogger.debug(itemTag, `Removing branch (no changes)`, {
+            newBranchName,
+          });
           await removeBranch(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
             branch: newBranchName,
           });
-          return { status: 'skipped', reason: 'no_changes', project, folder, version };
+          return {
+            status: "skipped",
+            reason: "no_changes",
+            project,
+            folder,
+            version,
+          };
         }
 
         // close older PR
         try {
-          itemLogger.debug(itemTag, `Checking for old PRs to close`, { commitKey });
+          itemLogger.debug(itemTag, `Checking for old PRs to close`, {
+            commitKey,
+          });
           await evtCloseOpeningPR({
             pat: GITHUB_PAT,
             user: GITHUB_USER,
@@ -943,22 +1010,40 @@ const main = async () => {
         let pull_number;
         try {
           itemLogger.info(itemTag, `Creating pull request`, { newBranchName });
-          pull_number = await createPulls(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
-            head: newBranchName,
-            base: GITHUB_BRANCH_BASE,
-            title: commitMessage,
-          });
+          pull_number = await createPulls(
+            GITHUB_PAT,
+            GITHUB_USER,
+            GITHUB_REPO,
+            {
+              head: newBranchName,
+              base: GITHUB_BRANCH_BASE,
+              title: commitMessage,
+            }
+          );
         } catch (error) {
           itemLogger.error(itemTag, `Failed to create PR`, {
             newBranchName,
             error: error.message,
           });
-          return { status: 'failed', reason: 'pr_creation_error', project, folder, error: error.message };
+          return {
+            status: "failed",
+            reason: "pr_creation_error",
+            project,
+            folder,
+            error: error.message,
+          };
         }
 
         if (!pull_number) {
-          itemLogger.error(itemTag, `No pull number returned`, { newBranchName });
-          return { status: 'failed', reason: 'no_pull_number', project, folder };
+          itemLogger.error(itemTag, `No pull number returned`, {
+            newBranchName,
+          });
+          return {
+            status: "failed",
+            reason: "no_pull_number",
+            project,
+            folder,
+          };
         }
 
         itemLogger.info(itemTag, `Pull request created`, {
@@ -972,17 +1057,27 @@ const main = async () => {
         if (pull_number && GITHUB_REVIEWERS) {
           try {
             const reviewers = (GITHUB_REVIEWERS || "").split("|");
-            itemLogger.debug(itemTag, `Assigning reviewers`, { reviewers, pull_number });
+            itemLogger.debug(itemTag, `Assigning reviewers`, {
+              reviewers,
+              pull_number,
+            });
             await requestReviewer2Pull(GITHUB_PAT, GITHUB_USER, GITHUB_REPO, {
               reviewers,
               pull_number,
             });
-            itemLogger.info(itemTag, `Reviewers assigned`, { reviewers, pull_number });
-          } catch (error) {
-            itemLogger.warn(itemTag, `Failed to assign reviewers (non-critical)`, {
-              error: error.message,
+            itemLogger.info(itemTag, `Reviewers assigned`, {
+              reviewers,
               pull_number,
             });
+          } catch (error) {
+            itemLogger.warn(
+              itemTag,
+              `Failed to assign reviewers (non-critical)`,
+              {
+                error: error.message,
+                pull_number,
+              }
+            );
             // Continue even if assigning reviewers fails
           }
         }
@@ -994,20 +1089,23 @@ const main = async () => {
           pull_number,
         });
 
-        return { status: 'success', project, folder, version, pull_number };
+        return { status: "success", project, folder, version, pull_number };
       } catch (error) {
         // Catch any unexpected errors
         itemLogger.error(itemTag, `Unexpected error during processing`, {
           error: error.message,
           stack: error.stack,
-          item: item.project && item.folder ? { project: item.project, folder: item.folder } : 'unknown',
+          item:
+            item.project && item.folder
+              ? { project: item.project, folder: item.folder }
+              : "unknown",
         });
         return {
-          status: 'failed',
-          reason: 'unexpected_error',
-          project: item.project || 'unknown',
-          folder: item.folder || 'unknown',
-          error: error.message
+          status: "failed",
+          reason: "unexpected_error",
+          project: item.project || "unknown",
+          folder: item.folder || "unknown",
+          error: error.message,
         };
       }
     })
@@ -1023,21 +1121,21 @@ const main = async () => {
   };
 
   results.forEach((result) => {
-    if (result.status === 'fulfilled') {
+    if (result.status === "fulfilled") {
       const value = result.value;
-      if (value?.status === 'success') {
+      if (value?.status === "success") {
         summary.success++;
-      } else if (value?.status === 'failed') {
+      } else if (value?.status === "failed") {
         summary.failed++;
         summary.details.push(value);
-      } else if (value?.status === 'skipped') {
+      } else if (value?.status === "skipped") {
         summary.skipped++;
       }
-    } else if (result.status === 'rejected') {
+    } else if (result.status === "rejected") {
       summary.failed++;
       summary.details.push({
-        status: 'failed',
-        reason: 'promise_rejected',
+        status: "failed",
+        reason: "promise_rejected",
         error: result.reason?.message || String(result.reason),
       });
     }
