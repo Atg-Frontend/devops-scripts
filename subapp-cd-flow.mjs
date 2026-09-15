@@ -114,6 +114,7 @@ const deploy2AzureBlob = async ({
   toPublicFiles,
   blobContainerName,
   excludePath,
+  excludePathIndex,
 }) => {
   const { azCopyExecPath } = await downloadAzCopy({
     azCopyDownloadLink,
@@ -160,7 +161,7 @@ const deploy2AzureBlob = async ({
     await azCopySyncFile2Blob({
       azCopyExecPath,
       azCopyArg: [
-        `--exclude-path=${excludePath}`,
+        `--exclude-path=${excludePathIndex}`,
         "--delete-destination=true",
         `--recursive=${assetPath || indexPath === rootPath ? false : true}`,
       ],
@@ -177,7 +178,7 @@ const deploy2AzureBlob = async ({
     await azCopySyncFile2Blob({
       azCopyExecPath,
       azCopyArg: [
-        `--exclude-path=${excludePath}`,
+        `--exclude-path=${excludePathIndex}`,
         "--delete-destination=true",
         "--recursive=false",
       ],
@@ -213,10 +214,17 @@ const main = async () => {
   const APP_NO_CACHE_FIELS = process.env.APP_NO_CACHE_FIELS ||
     argv.APP_NO_CACHE_FIELS || ["index.html", "app-config.json", "version"];
 
+  // azcopy splits --exclude-path on ";" only and matches each entry as a prefix
+  // of the path relative to the sync root, so the lists are per sync level.
+  // The versioned/latest syncs must ship the app manifest.json: index.html links
+  // it and the generated service worker precaches it.
   const EXCLUDE_PATH =
-    process.env.EXCLUDE_PATH ||
-    argv.EXCLUDE_PATH ||
-    "temp;apps;manifest.json;config,storage,tenants";
+    process.env.EXCLUDE_PATH || argv.EXCLUDE_PATH || "temp;apps";
+  // The env-root and root syncs also keep shared, container-level names out.
+  const EXCLUDE_PATH_INDEX =
+    process.env.EXCLUDE_PATH_INDEX ||
+    argv.EXCLUDE_PATH_INDEX ||
+    `${EXCLUDE_PATH};manifest.json;config;storage;tenants`;
 
   const { folderPath } = await getFilesAndPaths(APP_BUILD_FOLDER_PATH);
 
@@ -237,6 +245,7 @@ const main = async () => {
     toPublicFiles: APP_NO_CACHE_FIELS,
     blobContainerName: AZ_BLOB_BLOB_CONTAINER_NAME,
     excludePath: EXCLUDE_PATH,
+    excludePathIndex: EXCLUDE_PATH_INDEX,
   });
 
   return "ok";
